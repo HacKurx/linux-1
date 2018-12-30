@@ -99,7 +99,7 @@ SYSCALL_DEFINE5(add_key, const char __user *, _type,
 
 	if (plen) {
 		ret = -ENOMEM;
-		payload = kmalloc(plen, GFP_KERNEL | __GFP_NOWARN);
+		payload = kmalloc(plen, GFP_KERNEL | GFP_USERCOPY | __GFP_NOWARN);
 		if (!payload) {
 			if (plen <= PAGE_SIZE)
 				goto error2;
@@ -329,7 +329,7 @@ long keyctl_update_key(key_serial_t id,
 	payload = NULL;
 	if (plen) {
 		ret = -ENOMEM;
-		payload = kmalloc(plen, GFP_KERNEL);
+		payload = kmalloc(plen, GFP_KERNEL | GFP_USERCOPY);
 		if (!payload)
 			goto error;
 
@@ -621,7 +621,7 @@ okay:
 
 	/* calculate how much information we're going to return */
 	ret = -ENOMEM;
-	infobuf = kasprintf(GFP_KERNEL,
+	infobuf = kasprintf(GFP_KERNEL | GFP_USERCOPY,
 			    "%s;%d;%d;%08x;",
 			    key->type->name,
 			    from_kuid_munged(current_user_ns(), key->uid),
@@ -1073,7 +1073,7 @@ long keyctl_instantiate_key_common(key_serial_t id,
 
 	if (from) {
 		ret = -ENOMEM;
-		payload = kmalloc(plen, GFP_KERNEL);
+		payload = kmalloc(plen, GFP_KERNEL | GFP_USERCOPY);
 		if (!payload) {
 			if (plen <= PAGE_SIZE)
 				goto error;

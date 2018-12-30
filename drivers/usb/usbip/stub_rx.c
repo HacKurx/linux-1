@@ -80,7 +80,7 @@ static int tweak_clear_halt_cmd(struct urb *urb)
 	struct usb_ctrlrequest *req;
 	int target_endp;
 	int target_dir;
-	int target_pipe;
+	unsigned int target_pipe;
 	int ret;
 
 	req = (struct usb_ctrlrequest *) urb->setup_packet;
@@ -333,7 +333,7 @@ static struct stub_priv *stub_priv_alloc(struct stub_device *sdev,
 	return priv;
 }
 
-static int get_pipe(struct stub_device *sdev, struct usbip_header *pdu)
+static unsigned int get_pipe(struct stub_device *sdev, struct usbip_header *pdu)
 {
 	struct usb_device *udev = sdev->udev;
 	struct usb_host_endpoint *ep;
@@ -471,9 +471,9 @@ static void stub_recv_cmd_submit(struct stub_device *sdev,
 	struct stub_priv *priv;
 	struct usbip_device *ud = &sdev->ud;
 	struct usb_device *udev = sdev->udev;
-	int pipe = get_pipe(sdev, pdu);
+	unsigned int pipe = get_pipe(sdev, pdu);
 
-	if (pipe == -1)
+	if ((int)pipe == -1)
 		return;
 
 	priv = stub_priv_alloc(sdev, pdu);

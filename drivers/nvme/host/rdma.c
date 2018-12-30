@@ -88,7 +88,7 @@ enum nvme_rdma_queue_flags {
 
 struct nvme_rdma_queue {
 	struct nvme_rdma_qe	*rsp_ring;
-	atomic_t		sig_count;
+	atomic_unchecked_t		sig_count;
 	int			queue_size;
 	size_t			cmnd_capsule_len;
 	struct nvme_rdma_ctrl	*ctrl;
@@ -553,7 +553,7 @@ static int nvme_rdma_init_queue(struct nvme_rdma_ctrl *ctrl,
 		queue->cmnd_capsule_len = sizeof(struct nvme_command);
 
 	queue->queue_size = queue_size;
-	atomic_set(&queue->sig_count, 0);
+	atomic_set_unchecked(&queue->sig_count, 0);
 
 	queue->cm_id = rdma_create_id(&init_net, nvme_rdma_cm_handler, queue,
 			RDMA_PS_TCP, IB_QPT_RC);
@@ -1033,7 +1033,7 @@ static inline bool nvme_rdma_queue_sig_limit(struct nvme_rdma_queue *queue)
 {
 	int limit = 1 << ilog2((queue->queue_size + 1) / 2);
 
-	return (atomic_inc_return(&queue->sig_count) & (limit - 1)) == 0;
+	return (atomic_inc_return_unchecked(&queue->sig_count) & (limit - 1)) == 0;
 }
 
 static int nvme_rdma_post_send(struct nvme_rdma_queue *queue,

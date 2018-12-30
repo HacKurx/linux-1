@@ -287,6 +287,7 @@
 		VMLINUX_SYMBOL(__start_rodata) = .;			\
 		*(.rodata) *(.rodata.*)					\
 		RO_AFTER_INIT_DATA	/* Read only after init */	\
+		*(.data..read_only)					\
 		*(__vermagic)		/* Kernel version magic */	\
 		. = ALIGN(8);						\
 		VMLINUX_SYMBOL(__start___tracepoints_ptrs) = .;		\
@@ -461,9 +462,20 @@
 		ALIGN_FUNCTION();					\
 		*(.text.hot TEXT_MAIN .text.fixup .text.unlikely)	\
 		*(.ref.text)						\
+		REFCOUNT_TEXT						\
 	MEM_KEEP(init.text)						\
 	MEM_KEEP(exit.text)						\
 
+#define __REFCOUNT_TEXT(section)					\
+		VMLINUX_SYMBOL(__##section##_start) = .;		\
+		*(.text.##section)					\
+		VMLINUX_SYMBOL(__##section##_end) = .;
+
+#define REFCOUNT_TEXT							\
+	__REFCOUNT_TEXT(refcount_overflow)				\
+	__REFCOUNT_TEXT(refcount64_overflow)				\
+	__REFCOUNT_TEXT(refcount_underflow)				\
+	__REFCOUNT_TEXT(refcount64_underflow)				\
 
 /* sched.text is aling to function alignment to secure we have same
  * address even at second ld pass when generating System.map */
@@ -565,7 +577,9 @@
 	MEM_DISCARD(init.data)						\
 	KERNEL_CTORS()							\
 	MCOUNT_REC()							\
+	*(.init.rodata.str)						\
 	*(.init.rodata)							\
+	*(.init.rodata.*)						\
 	FTRACE_EVENTS()							\
 	TRACE_SYSCALLS()						\
 	KPROBE_BLACKLIST()						\
@@ -589,9 +603,12 @@
 
 #define EXIT_DATA							\
 	*(.exit.data)							\
+	*(.exit.rodata)							\
+	*(.exit.rodata.*)						\
 	*(.fini_array)							\
 	*(.dtors)							\
 	MEM_DISCARD(exit.data)						\
+	*(.exit.rodata.str)						\
 	MEM_DISCARD(exit.rodata)
 
 #define EXIT_TEXT							\
@@ -788,7 +805,9 @@
 	VMLINUX_SYMBOL(__per_cpu_user_mapped_end) = .;			\
 	. = ALIGN(PAGE_SIZE);						\
 	*(.data..percpu..page_aligned)					\
-	. = ALIGN(cacheline);						\
+	. = ALIGN(PAGE_SIZE);						\
+	*(.data..percpu..read_only)					\
+	. = ALIGN(PAGE_SIZE);						\
 	*(.data..percpu..read_mostly)					\
 	. = ALIGN(cacheline);						\
 	*(.data..percpu)						\
@@ -815,17 +834,18 @@
  * section in the linker script will go there too.  @phdr should have
  * a leading colon.
  *
- * Note that this macros defines __per_cpu_load as an absolute symbol.
+ * Note that this macros defines per_cpu_load as an absolute symbol.
  * If there is no need to put the percpu section at a predetermined
  * address, use PERCPU_SECTION.
  */
 #define PERCPU_VADDR(cacheline, vaddr, phdr)				\
-	VMLINUX_SYMBOL(__per_cpu_load) = .;				\
-	.data..percpu vaddr : AT(VMLINUX_SYMBOL(__per_cpu_load)		\
+	per_cpu_load = .;						\
+	.data..percpu vaddr : AT(VMLINUX_SYMBOL(per_cpu_load)		\
 				- LOAD_OFFSET) {			\
+		VMLINUX_SYMBOL(__per_cpu_load) = . + per_cpu_load;	\
 		PERCPU_INPUT(cacheline)					\
 	} phdr								\
-	. = VMLINUX_SYMBOL(__per_cpu_load) + SIZEOF(.data..percpu);
+	. = VMLINUX_SYMBOL(per_cpu_load) + SIZEOF(.data..percpu);
 
 /**
  * PERCPU_SECTION - define output section for percpu area, simple version
@@ -887,12 +907,14 @@
 
 #define INIT_DATA_SECTION(initsetup_align)				\
 	.init.data : AT(ADDR(.init.data) - LOAD_OFFSET) {		\
+		VMLINUX_SYMBOL(_sinitdata) = .;				\
 		INIT_DATA						\
 		INIT_SETUP(initsetup_align)				\
 		INIT_CALLS						\
 		CON_INITCALL						\
 		SECURITY_INITCALL					\
 		INIT_RAM_FS						\
+		VMLINUX_SYMBOL(_einitdata) = .;				\
 	}
 
 #define BSS_SECTION(sbss_align, bss_align, stop_align)			\

@@ -351,8 +351,8 @@ static inline int has_pushable_tasks(struct rq *rq)
 	return !plist_head_empty(&rq->rt.pushable_tasks);
 }
 
-static DEFINE_PER_CPU(struct callback_head, rt_push_head);
-static DEFINE_PER_CPU(struct callback_head, rt_pull_head);
+static DEFINE_PER_CPU(struct balance_callback, rt_push_head);
+static DEFINE_PER_CPU(struct balance_callback, rt_pull_head);
 
 static void push_rt_tasks(struct rq *);
 static void pull_rt_task(struct rq *);
@@ -1932,7 +1932,7 @@ static int rto_next_cpu(struct rq *rq)
 		 *
 		 * Matches WMB in rt_set_overload().
 		 */
-		next = atomic_read_acquire(&rd->rto_loop_next);
+		next = atomic_read_acquire_unchecked(&rd->rto_loop_next);
 
 		if (rd->rto_loop == next)
 			break;
@@ -1958,7 +1958,7 @@ static void tell_cpu_to_push(struct rq *rq)
 	int cpu = -1;
 
 	/* Keep the loop going if the IPI is currently active */
-	atomic_inc(&rq->rd->rto_loop_next);
+	atomic_inc_unchecked(&rq->rd->rto_loop_next);
 
 	/* Only one CPU can initiate a loop at a time */
 	if (!rto_start_trylock(&rq->rd->rto_loop_start))

@@ -2482,7 +2482,7 @@ static int xfrm_user_rcv_msg(struct sk_buff *skb, struct nlmsghdr *nlh)
 			return -EINVAL;
 
 		{
-			struct netlink_dump_control c = {
+			netlink_dump_control_no_const c = {
 				.start = link->start,
 				.dump = link->dump,
 				.done = link->done,
