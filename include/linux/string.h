@@ -123,6 +123,7 @@ extern char *kstrdup(const char *s, gfp_t gfp) __malloc __nocapture(1);
 extern const char *kstrdup_const(const char *s, gfp_t gfp) __nocapture(1);
 extern char *kstrndup(const char *s, size_t len, gfp_t gfp) __nocapture(1);
 extern void *kmemdup(const void *src, size_t len, gfp_t gfp) __nocapture(1);
+extern char *kmemdup_nul(const char *s, size_t len, gfp_t gfp) __nocapture(1);
 
 extern char **argv_split(gfp_t gfp, const char *str, int *argcp);
 extern void argv_free(char **argv);

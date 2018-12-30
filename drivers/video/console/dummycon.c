@@ -115,7 +115,6 @@ const struct consw dummy_con = {
     .con_switch =	dummycon_switch,
     .con_blank =	dummycon_blank,
     .con_font_set =	dummycon_font_set,
-    .con_font_get =	dummycon_font_get,
     .con_font_default =	dummycon_font_default,
     .con_font_copy =	dummycon_font_copy,
 };

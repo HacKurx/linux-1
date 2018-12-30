@@ -508,23 +508,17 @@ read_kcore(struct file *file, char __user *buffer, size_t buflen, loff_t *fpos)
 				return -EFAULT;
 		} else {
 			if (kern_addr_valid(start)) {
-				unsigned long n;
-				mm_segment_t oldfs;
-
 				/*
 				 * Using bounce buffer to bypass the
 				 * hardened user copy kernel text checks.
 				 */
-				oldfs = get_fs();
-				set_fs(KERNEL_DS);
-				n = __copy_from_user(buf, (const void __user *)start, tsz);
-				set_fs(oldfs);
-				if (n)
-					n = clear_user(buffer, tsz);
-				else
-					n = copy_to_user(buffer, buf, tsz);
-				if (n)
-					return -EFAULT;
+				if (probe_kernel_read(buf, (void *) start, tsz)) {
+					if (clear_user(buffer, tsz))
+						return -EFAULT;
+				} else {
+					if (copy_to_user(buffer, buf, tsz))
+						return -EFAULT;
+				}
 			} else {
 				if (clear_user(buffer, tsz))
 					return -EFAULT;

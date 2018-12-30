@@ -88,6 +88,10 @@
 #define __weak		__attribute__((weak))
 #define __alias(symbol)	__attribute__((alias(#symbol)))
 
+#ifdef RETPOLINE
+#define __noretpoline __attribute__((indirect_branch("keep")))
+#endif
+
 /*
  * it doesn't make sense on ARM (currently the only user of __naked)
  * to trace naked functions because then mcount is called without
@@ -191,6 +195,10 @@
 #define __bos0(ptr)		__bos((ptr), 0)
 #define __bos1(ptr)		__bos((ptr), 1)
 #endif /* GCC_VERSION >= 40300 */
+
+#if GCC_VERSION >= 40400
+#define __optimize(level)	__attribute__((__optimize__(level)))
+#endif /* GCC_VERSION >= 40400 */
 
 #if GCC_VERSION >= 40500
 
