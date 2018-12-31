@@ -47,7 +47,7 @@ struct psci_operations {
 	int (*migrate_info_type)(void);
 	enum psci_conduit conduit;
 	enum smccc_version smccc_version;
-} __no_const;
+};
 
 extern struct psci_operations psci_ops;
 

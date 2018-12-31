@@ -410,7 +410,7 @@ static ssize_t __batadv_store_uint_attr(const char *buff, size_t count,
 	int ret;
 
 	ret = batadv_store_uint_attr(buff, count, net_dev, slave_dev,
-				     attr->name, min, max, attr_store);
+				     attr->attr.name, min, max, attr_store);
 	if (post_func && ret)
 		post_func(net_dev);
 
