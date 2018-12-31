@@ -292,6 +292,8 @@ static inline u64 __intentional_overflow(-1) jiffies_to_nsecs(const unsigned lon
 	return (u64)jiffies_to_usecs(j) * NSEC_PER_USEC;
 }
 
+extern u64 jiffies64_to_nsecs(u64 j) __intentional_overflow(-1);
+
 extern unsigned long __msecs_to_jiffies(const unsigned int m) __intentional_overflow(-1);
 #if HZ <= MSEC_PER_SEC && !(MSEC_PER_SEC % HZ)
 /*

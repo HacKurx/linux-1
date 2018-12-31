@@ -284,6 +284,9 @@ static ssize_t cifs_stats_proc_write(struct file *file,
 		atomic_set_unchecked(&totBufAllocCount, 0);
 		atomic_set_unchecked(&totSmBufAllocCount, 0);
 #endif /* CONFIG_CIFS_STATS2 */
+		atomic_set(&tcpSesReconnectCount, 0);
+		atomic_set(&tconInfoReconnectCount, 0);
+
 		spin_lock(&GlobalMid_Lock);
 		GlobalMaxActiveXid = 0;
 		GlobalCurrentXid = 0;

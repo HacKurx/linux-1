@@ -406,11 +406,7 @@ static int __init init_timer_list_procfs(void)
 {
 	struct proc_dir_entry *pe;
 
-#ifdef CONFIG_GRKERNSEC_PROC_ADD
 	pe = proc_create("timer_list", 0400, NULL, &timer_list_fops);
-#else
-	pe = proc_create("timer_list", 0444, NULL, &timer_list_fops);
-#endif
 	if (!pe)
 		return -ENOMEM;
 	return 0;

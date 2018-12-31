@@ -216,9 +216,9 @@ static netdev_tx_t rionet_start_xmit(struct sk_buff *skb, struct net_device *nde
 			 * it just report sending a packet to the target
 			 * (without actual packet transfer).
 			 */
-			dev_kfree_skb_any(skb);
 			ndev->stats.tx_packets++;
 			ndev->stats.tx_bytes += skb->len;
+			dev_kfree_skb_any(skb);
 		}
 	}
 
