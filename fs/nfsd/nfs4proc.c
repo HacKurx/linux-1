@@ -1762,6 +1762,7 @@ nfsd4_proc_compound(struct svc_rqst *rqstp, void *_args, void *_resp)
 	if (status) {
 		op = &args->ops[0];
 		op->status = status;
+		resp->opcnt = 1;
 		goto encode_op;
 	}
 
