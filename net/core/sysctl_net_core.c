@@ -438,8 +438,6 @@ static __net_init int sysctl_core_net_init(struct net *net)
 {
 	ctl_table_no_const *tbl = NULL;
 
-	net->core.sysctl_somaxconn = SOMAXCONN;
-
 	if (!net_eq(net, &init_net)) {
 		tbl = kmemdup(netns_core_table, sizeof(netns_core_table), GFP_KERNEL);
 		if (tbl == NULL)

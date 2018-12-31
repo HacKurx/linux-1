@@ -1352,8 +1352,6 @@ static bool is_zone_first_populated(pg_data_t *pgdat, struct zone *zone)
 			return zone == compare;
 	}
 
-	/* The zone must be somewhere! */
-	WARN_ON_ONCE(1);
 	return false;
 }
 
