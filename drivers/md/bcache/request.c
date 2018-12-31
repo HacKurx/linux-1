@@ -639,11 +639,11 @@ static void search_free(struct work_struct *work)
 {
 	struct closure *cl = container_of(work, struct closure, work);
 	struct search *s = container_of(cl, struct search, cl);
-	bio_complete(s);
 
 	if (s->iop.bio)
 		bio_put(s->iop.bio);
 
+	bio_complete(s);
 	closure_debug_destroy(cl);
 	mempool_free(s, s->d->c->search);
 }
