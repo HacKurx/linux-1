@@ -58,10 +58,10 @@ static int media_device_close(struct file *filp)
 	return 0;
 }
 
-static long media_device_get_info(struct media_device *dev,
-				 void *_info)
+static long media_device_get_info(struct media_device *dev, void *arg)
 {
-	struct media_device_info *info = _info;
+	struct media_device_info *info = arg;
+
 	memset(info, 0, sizeof(*info));
 
 	if (dev->driver_name[0])
@@ -98,10 +98,9 @@ static struct media_entity *find_entity(struct media_device *mdev, u32 id)
 	return NULL;
 }
 
-static long media_device_enum_entities(struct media_device *mdev,
-				       void *_entd)
+static long media_device_enum_entities(struct media_device *mdev, void *arg)
 {
-	struct media_entity_desc *entd = _entd;
+	struct media_entity_desc *entd = arg;
 	struct media_entity *ent;
 
 	ent = find_entity(mdev, entd->id);
@@ -152,10 +151,9 @@ static void media_device_kpad_to_upad(const struct media_pad *kpad,
 	upad->flags = kpad->flags;
 }
 
-static long media_device_enum_links(struct media_device *mdev,
-				    void *_links)
+static long media_device_enum_links(struct media_device *mdev, void *arg)
 {
-	struct media_links_enum *links = _links;
+	struct media_links_enum *links = arg;
 	struct media_entity *entity;
 
 	entity = find_entity(mdev, links->entity);
@@ -201,10 +199,9 @@ static long media_device_enum_links(struct media_device *mdev,
 	return 0;
 }
 
-static long media_device_setup_link(struct media_device *mdev,
-				    void *_linkd)
+static long media_device_setup_link(struct media_device *mdev, void *arg)
 {
-	struct media_link_desc *linkd = _linkd;
+	struct media_link_desc *linkd = arg;
 	struct media_link *link = NULL;
 	struct media_entity *source;
 	struct media_entity *sink;
@@ -230,10 +227,9 @@ static long media_device_setup_link(struct media_device *mdev,
 	return __media_entity_setup_link(link, linkd->flags);
 }
 
-static long media_device_get_topology(struct media_device *mdev,
-				      void *_topo)
+static long media_device_get_topology(struct media_device *mdev, void *arg)
 {
-	struct media_v2_topology *topo = _topo;
+	struct media_v2_topology *topo = arg;
 	struct media_entity *entity;
 	struct media_interface *intf;
 	struct media_pad *pad;

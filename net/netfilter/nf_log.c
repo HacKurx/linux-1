@@ -444,16 +444,17 @@ static int nf_log_proc_dostring(struct ctl_table *table, int write,
 		rcu_assign_pointer(net->nf.nf_loggers[tindex], logger);
 		mutex_unlock(&nf_log_mutex);
 	} else {
-		ctl_table_no_const nf_log_table = *table;
+		ctl_table_no_const tmp = *table;
 
+		tmp.data = buf;
 		mutex_lock(&nf_log_mutex);
 		logger = nft_log_dereference(net->nf.nf_loggers[tindex]);
 		if (!logger)
-			nf_log_table.data = "NONE";
+			strlcpy(buf, "NONE", sizeof(buf));
 		else
-			nf_log_table.data = logger->name;
-		r = proc_dostring(&nf_log_table, write, buffer, lenp, ppos);
+			strlcpy(buf, logger->name, sizeof(buf));
 		mutex_unlock(&nf_log_mutex);
+		r = proc_dostring(&tmp, write, buffer, lenp, ppos);
 	}
 
 	return r;
