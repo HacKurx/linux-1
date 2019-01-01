@@ -95,3 +95,4 @@ enable_so_zpios_write_fndecl_61823 zpios_write fndecl 3 61823 NULL
 enable_so_proc_copyin_string_fndecl_62019 proc_copyin_string fndecl 4 62019 NULL
 enable_so_random_get_pseudo_bytes_fndecl_64611 random_get_pseudo_bytes fndecl 2 64611 NULL
 enable_so_zpios_read_fndecl_64734 zpios_read fndecl 3 64734 NULL
+enable_so_zpl_xattr_acl_set_access_fndecl_24129 zpl_xattr_acl_set_access fndecl 4 24129 NULL
