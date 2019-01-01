@@ -1033,7 +1033,7 @@ static void shrink_dentry_list(struct list_head *list)
 		while (dentry && !lockref_put_or_lock(&dentry->d_lockref)) {
 			parent = lock_parent(dentry);
 			if (__lockref_read(&dentry->d_lockref) != 1) {
-				__lockref_inc(&dentry->d_lockref);
+				__lockref_dec(&dentry->d_lockref);
 				spin_unlock(&dentry->d_lock);
 				if (parent)
 					spin_unlock(&parent->d_lock);
