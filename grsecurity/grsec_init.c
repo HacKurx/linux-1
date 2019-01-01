@@ -268,7 +268,9 @@ grsecurity_init(void)
 #endif
 #ifdef CONFIG_GRKERNSEC_TPE
 	grsec_enable_tpe = 1;
+#ifndef CONFIG_GRKERNSEC_TPE_STRICT
 	grsec_tpe_gid = KGIDT_INIT(CONFIG_GRKERNSEC_TPE_GID);
+#endif
 #ifdef CONFIG_GRKERNSEC_TPE_ALL
 	grsec_enable_tpe_all = 1;
 #endif

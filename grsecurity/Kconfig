@@ -916,9 +916,17 @@ config GRKERNSEC_TPE
 	  root-owned directories writable only by root.  If the sysctl option
 	  is enabled, a sysctl option with name "tpe" is created.
 
+config GRKERNSEC_TPE_STRICT
+	bool "Enforce strict TPE restrictions on all users"
+	depends on GRKERNSEC_TPE
+	help
+	  If you say Y here, the TPE restrictions will be enforced on all
+	  users, including root, who will be unable to (directly) execute
+	  anything that could be written to by any other user.
+
 config GRKERNSEC_TPE_ALL
 	bool "Partially restrict all non-root users"
-	depends on GRKERNSEC_TPE
+	depends on GRKERNSEC_TPE && !GRKERNSEC_TPE_STRICT
 	help
 	  If you say Y here, all non-root users will be covered under
 	  a weaker TPE restriction.  This is separate from, and in addition to,
@@ -932,7 +940,7 @@ config GRKERNSEC_TPE_ALL
 
 config GRKERNSEC_TPE_INVERT
 	bool "Invert GID option"
-	depends on GRKERNSEC_TPE
+	depends on GRKERNSEC_TPE && !GRKERNSEC_TPE_STRICT
 	help
 	  If you say Y here, the group you specify in the TPE configuration will
 	  decide what group TPE restrictions will be *disabled* for.  This
@@ -945,10 +953,11 @@ config GRKERNSEC_TPE_GID
 	int
 	default GRKERNSEC_TPE_UNTRUSTED_GID if (GRKERNSEC_TPE && !GRKERNSEC_TPE_INVERT)
 	default GRKERNSEC_TPE_TRUSTED_GID if (GRKERNSEC_TPE && GRKERNSEC_TPE_INVERT)
+	depends on !GRKERNSEC_TPE_STRICT
 	
 config GRKERNSEC_TPE_UNTRUSTED_GID
 	int "GID for TPE-untrusted users"
-	depends on GRKERNSEC_TPE && !GRKERNSEC_TPE_INVERT
+	depends on GRKERNSEC_TPE && !GRKERNSEC_TPE_INVERT && !GRKERNSEC_TPE_STRICT
 	default 1005
 	help
 	  Setting this GID determines what group TPE restrictions will be
@@ -957,7 +966,7 @@ config GRKERNSEC_TPE_UNTRUSTED_GID
 
 config GRKERNSEC_TPE_TRUSTED_GID
 	int "GID for TPE-trusted users"
-	depends on GRKERNSEC_TPE && GRKERNSEC_TPE_INVERT
+	depends on GRKERNSEC_TPE && GRKERNSEC_TPE_INVERT && !GRKERNSEC_TPE_STRICT
 	default 1005
 	help
 	  Setting this GID determines what group TPE restrictions will be
