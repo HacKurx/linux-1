@@ -1657,16 +1657,29 @@ EXPORT_SYMBOL(del_random_ready_callback);
 void get_random_bytes_arch(void *buf, int nbytes)
 {
 	char *p = buf;
+#if DEBUG_RANDOM_BOOT > 0
+	if (unlikely(blocking_pool.initialized == 0))
+		printk(KERN_NOTICE "random: %pF get_random_bytes called "
+		       "with %d bits of entropy available\n",
+		       (void *) _RET_IP_,
+		       blocking_pool.entropy_total);
+#endif
+	trace_get_random_bytes(nbytes, _RET_IP_);
+
+	extract_entropy(&blocking_pool, p, nbytes, 0, 0);
 
 	trace_get_random_bytes_arch(nbytes, _RET_IP_);
 	while (nbytes) {
 		unsigned long v;
+		unsigned long tmp;
 		int chunk = min(nbytes, (int)sizeof(unsigned long));
 
 		if (!arch_get_random_long(&v))
 			break;
 		
-		memcpy(p, &v, chunk);
+		memcpy(&tmp, p, chunk);
+		tmp ^= v;
+		memcpy(p, &tmp, chunk);
 		p += chunk;
 		nbytes -= chunk;
 	}
