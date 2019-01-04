@@ -116,6 +116,9 @@ static ssize_t proc_bus_pci_write(struct file *file, const char __user *buf,
 	int size = dev->cfg_size;
 	int cnt;
 
+	if (!capable(CAP_SYS_RAWIO))
+		return -EPERM;
+
 	if (pos >= size)
 		return 0;
 	if (nbytes >= size)
@@ -194,6 +197,9 @@ static long proc_bus_pci_ioctl(struct file *file, unsigned int cmd,
 	struct pci_filp_private *fpriv = file->private_data;
 #endif /* HAVE_PCI_MMAP */
 	int ret = 0;
+
+	if (!capable(CAP_SYS_RAWIO))
+		return -EPERM;
 
 	switch (cmd) {
 	case PCIIOC_CONTROLLER:

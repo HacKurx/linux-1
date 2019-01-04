@@ -92,6 +92,9 @@ SYSCALL_DEFINE5(pciconfig_write, unsigned long, bus, unsigned long, dfn,
 	u32 dword;
 	int err = 0;
 
+	if (!capable(CAP_SYS_RAWIO))
+		return -EPERM;
+
 	if (!capable(CAP_SYS_ADMIN))
 		return -EPERM;
 

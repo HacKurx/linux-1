@@ -33,6 +33,9 @@ static ssize_t cm_write(struct file *file, const char __user * user_buf,
 	return -EPERM;
 #endif
 
+	if (!capable(CAP_SYS_RAWIO))
+		return -EPERM;
+
 	if (!(*ppos)) {
 		/* parse the table header to get the table length */
 		if (count <= sizeof(struct acpi_table_header))
