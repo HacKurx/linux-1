@@ -97,6 +97,16 @@ owner_mt(const struct sk_buff *skb, struct xt_action_param *par)
 			return false;
 	}
 
+	if (info->match & XT_OWNER_NID)
+		if ((skb->sk->sk_nid != info->nid) ^
+		    !!(info->invert & XT_OWNER_NID))
+			return 0;
+
+	if (info->match & XT_OWNER_XID)
+		if ((skb->sk->sk_xid != info->xid) ^
+		    !!(info->invert & XT_OWNER_XID))
+			return 0;
+
 	return true;
 }
 
