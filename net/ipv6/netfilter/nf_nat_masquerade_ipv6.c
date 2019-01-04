@@ -39,7 +39,7 @@ nf_nat_masquerade_ipv6(struct sk_buff *skb, const struct nf_nat_range *range,
 			    ctinfo == IP_CT_RELATED_REPLY));
 
 	if (ipv6_dev_get_saddr(nf_ct_net(ct), out,
-			       &ipv6_hdr(skb)->daddr, 0, &src) < 0)
+			       &ipv6_hdr(skb)->daddr, 0, &src, NULL) < 0)
 		return NF_DROP;
 
 	nfct_nat(ct)->masq_index = out->ifindex;

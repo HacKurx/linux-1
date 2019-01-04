@@ -153,11 +153,18 @@ static int tcp_v6_connect(struct sock *sk, struct sockaddr *uaddr,
 	 */
 
 	if (ipv6_addr_any(&usin->sin6_addr)) {
-		if (ipv6_addr_v4mapped(&sk->sk_v6_rcv_saddr))
-			ipv6_addr_set_v4mapped(htonl(INADDR_LOOPBACK),
-					       &usin->sin6_addr);
-		else
-			usin->sin6_addr = in6addr_loopback;
+		struct nx_info *nxi =  sk->sk_nx_info;
+
+		if (nxi && nx_info_has_v6(nxi)) {
+			/* FIXME: remap lback? */
+			usin->sin6_addr = nxi->v6.ip;
+		} else {
+			if (ipv6_addr_v4mapped(&sk->sk_v6_rcv_saddr))
+				ipv6_addr_set_v4mapped(htonl(INADDR_LOOPBACK),
+						       &usin->sin6_addr);
+			else
+				usin->sin6_addr = in6addr_loopback;
+		}
 	}
 
 	addr_type = ipv6_addr_type(&usin->sin6_addr);

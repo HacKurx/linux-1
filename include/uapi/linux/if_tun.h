@@ -56,6 +56,7 @@
  */
 #define TUNSETVNETBE _IOW('T', 222, int)
 #define TUNGETVNETBE _IOR('T', 223, int)
+#define TUNSETNID    _IOW('T', 224, int)
 
 /* TUNSETIFF ifr flags */
 #define IFF_TUN		0x0001

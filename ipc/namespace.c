@@ -13,6 +13,7 @@
 #include <linux/mount.h>
 #include <linux/user_namespace.h>
 #include <linux/proc_ns.h>
+#include <linux/vserver/global.h>
 
 #include "util.h"
 
@@ -59,6 +60,7 @@ static struct ipc_namespace *create_ipc_ns(struct user_namespace *user_ns,
 	sem_init_ns(ns);
 	msg_init_ns(ns);
 	shm_init_ns(ns);
+	atomic_inc(&vs_global_ipc_ns);
 
 	return ns;
 
@@ -121,6 +123,7 @@ static void free_ipc_ns(struct ipc_namespace *ns)
 	dec_ipc_namespaces(ns->ucounts);
 	put_user_ns(ns->user_ns);
 	ns_free_inum(&ns->ns);
+	atomic_dec(&vs_global_ipc_ns);
 	kfree(ns);
 }
 

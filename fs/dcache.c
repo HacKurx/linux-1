@@ -39,6 +39,7 @@
 #include <linux/ratelimit.h>
 #include <linux/list_lru.h>
 #include <linux/kasan.h>
+#include <linux/vs_limit.h>
 
 #include "internal.h"
 #include "mount.h"
@@ -692,6 +693,7 @@ static inline bool fast_dput(struct dentry *dentry)
 		spin_lock(&dentry->d_lock);
 		if (__lockref_read(&dentry->d_lockref) > 1) {
 			__lockref_dec(&dentry->d_lockref);
+			vx_dentry_dec(dentry);
 			spin_unlock(&dentry->d_lock);
 			return 1;
 		}
@@ -821,6 +823,7 @@ repeat:
 	dentry_lru_add(dentry);
 
 	__lockref_dec(&dentry->d_lockref);
+	vx_dentry_dec(dentry);
 	spin_unlock(&dentry->d_lock);
 	return;
 
@@ -838,6 +841,7 @@ EXPORT_SYMBOL(dput);
 static inline void __dget_dlock(struct dentry *dentry)
 {
 	__lockref_inc(&dentry->d_lockref);
+	vx_dentry_inc(dentry);
 }
 
 static inline void __dget(struct dentry *dentry)
@@ -849,6 +853,8 @@ struct dentry *dget_parent(struct dentry *dentry)
 {
 	int gotref;
 	struct dentry *ret;
+
+	vx_dentry_dec(dentry);
 
 	/*
 	 * Do optimistic parent lookup without any
@@ -880,6 +886,7 @@ repeat:
 	rcu_read_unlock();
 	BUG_ON(!__lockref_read(&ret->d_lockref));
 	__lockref_inc(&ret->d_lockref);
+	vx_dentry_inc(ret);
 	spin_unlock(&ret->d_lock);
 	return ret;
 }
@@ -1034,6 +1041,7 @@ static void shrink_dentry_list(struct list_head *list)
 			parent = lock_parent(dentry);
 			if (__lockref_read(&dentry->d_lockref) != 1) {
 				__lockref_dec(&dentry->d_lockref);
+				vx_dentry_dec(dentry);
 				spin_unlock(&dentry->d_lock);
 				if (parent)
 					spin_unlock(&parent->d_lock);
@@ -1600,6 +1608,9 @@ struct dentry *__d_alloc(struct super_block *sb, const struct qstr *name)
 	char *dname;
 	int err;
 
+	if (!vx_dentry_avail(1))
+		return NULL;
+
 	dentry = kmem_cache_alloc(dentry_cache, GFP_KERNEL);
 	if (!dentry)
 		return NULL;
@@ -1643,6 +1654,7 @@ struct dentry *__d_alloc(struct super_block *sb, const struct qstr *name)
 
 	__lockref_set(&dentry->d_lockref, 1);
 	dentry->d_flags = 0;
+	vx_dentry_inc(dentry);
 	spin_lock_init(&dentry->d_lock);
 	seqcount_init(&dentry->d_seq);
 	dentry->d_inode = NULL;
@@ -2319,6 +2331,7 @@ struct dentry *__d_lookup(const struct dentry *parent, const struct qstr *name)
 			goto next;
 
 		__lockref_inc(&dentry->d_lockref);
+		vx_dentry_inc(dentry);
 		found = dentry;
 		spin_unlock(&dentry->d_lock);
 		break;
@@ -3577,6 +3590,7 @@ static enum d_walk_ret d_genocide_kill(void *data, struct dentry *dentry)
 		if (!(dentry->d_flags & DCACHE_GENOCIDE)) {
 			dentry->d_flags |= DCACHE_GENOCIDE;
 			__lockref_dec(&dentry->d_lockref);
+			vx_dentry_dec(dentry);
 		}
 	}
 	return D_WALK_CONTINUE;

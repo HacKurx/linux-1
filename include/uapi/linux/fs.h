@@ -130,6 +130,9 @@ struct inodes_stat_t {
 #define MS_I_VERSION	(1<<23) /* Update inode I_version field */
 #define MS_STRICTATIME	(1<<24) /* Always perform atime updates */
 #define MS_LAZYTIME	(1<<25) /* Update the on-disk [acm]times lazily */
+#define MS_TAGGED	(1<<8)	/* use generic inode tagging */
+#define MS_NOTAGCHECK	(1<<9)	/* don't check tags */
+#define MS_TAGID	(1<<26) /* use specific tag for this mount */
 
 /* These sb flags are internal to the kernel */
 #define MS_SUBMOUNT     (1<<26)
@@ -313,13 +316,16 @@ struct fscrypt_policy {
 #define FS_EA_INODE_FL			0x00200000 /* Inode used for large EA */
 #define FS_EOFBLOCKS_FL			0x00400000 /* Reserved for ext4 */
 #define FS_NOCOW_FL			0x00800000 /* Do not cow file */
+#define FS_IXUNLINK_FL			0x08000000 /* Immutable invert on unlink */
 #define FS_INLINE_DATA_FL		0x10000000 /* Reserved for ext4 */
 #define FS_PROJINHERIT_FL		0x20000000 /* Create with parents projid */
 #define FS_RESERVED_FL			0x80000000 /* reserved for ext2 lib */
 
-#define FS_FL_USER_VISIBLE		0x0003DFFF /* User visible flags */
-#define FS_FL_USER_MODIFIABLE		0x000380FF /* User modifiable flags */
+#define FS_BARRIER_FL			0x04000000 /* Barrier for chroot() */
+#define FS_COW_FL			0x40000000 /* Copy on Write marker */
 
+#define FS_FL_USER_VISIBLE		0x0103DFFF /* User visible flags */
+#define FS_FL_USER_MODIFIABLE		0x010380FF /* User modifiable flags */
 
 #define SYNC_FILE_RANGE_WAIT_BEFORE	1
 #define SYNC_FILE_RANGE_WRITE		2

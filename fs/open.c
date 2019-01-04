@@ -31,6 +31,11 @@
 #include <linux/ima.h>
 #include <linux/dnotify.h>
 #include <linux/compat.h>
+#include <linux/vs_base.h>
+#include <linux/vs_limit.h>
+#include <linux/vs_tag.h>
+#include <linux/vs_cowbl.h>
+#include <linux/vserver/dlimit.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/fs.h>
@@ -67,12 +72,17 @@ int do_truncate(struct dentry *dentry, loff_t length, unsigned int time_attrs,
 	return ret;
 }
 
-long vfs_truncate(const struct path *path, loff_t length)
+long vfs_truncate(struct path *path, loff_t length)
 {
 	struct inode *inode;
 	struct dentry *upperdentry;
 	long error;
 
+#ifdef CONFIG_VSERVER_COWBL
+	error = cow_check_and_break(path);
+	if (error)
+		goto out;
+#endif
 	inode = path->dentry->d_inode;
 
 	/* For directories it's -EISDIR, for other non-regulars - -EINVAL */
@@ -599,6 +609,13 @@ SYSCALL_DEFINE3(fchmodat, int, dfd, const char __user *, filename, umode_t, mode
 	unsigned int lookup_flags = LOOKUP_FOLLOW;
 retry:
 	error = user_path_at(dfd, filename, lookup_flags, &path);
+#ifdef CONFIG_VSERVER_COWBL
+	if (!error) {
+		error = cow_check_and_break(&path);
+		if (error)
+			path_put(&path);
+	}
+#endif
 	if (!error) {
 		error = chmod_common(&path, mode);
 		path_put(&path);
@@ -636,13 +653,13 @@ retry_deleg:
 		if (!uid_valid(uid))
 			return -EINVAL;
 		newattrs.ia_valid |= ATTR_UID;
-		newattrs.ia_uid = uid;
+		newattrs.ia_uid = make_kuid(&init_user_ns, dx_map_uid(user));
 	}
 	if (group != (gid_t) -1) {
 		if (!gid_valid(gid))
 			return -EINVAL;
 		newattrs.ia_valid |= ATTR_GID;
-		newattrs.ia_gid = gid;
+		newattrs.ia_gid = make_kgid(&init_user_ns, dx_map_gid(group));
 	}
 	if (!S_ISDIR(inode->i_mode))
 		newattrs.ia_valid |=
@@ -680,6 +697,10 @@ retry:
 	error = mnt_want_write(path.mnt);
 	if (error)
 		goto out_release;
+#ifdef CONFIG_VSERVER_COWBL
+	error = cow_check_and_break(&path);
+	if (!error)
+#endif
 	error = chown_common(&path, user, group);
 	mnt_drop_write(path.mnt);
 out_release:

@@ -180,7 +180,8 @@ static inline unsigned char dt_type(struct inode *inode)
  * both impossible due to the lock on directory.
  */
 
-int dcache_readdir(struct file *file, struct dir_context *ctx)
+static inline int do_dcache_readdir_filter(struct file *file,
+	struct dir_context *ctx, int (*filter)(struct dentry *dentry))
 {
 	struct dentry *dentry = file->f_path.dentry;
 	struct dentry *cursor = file->private_data;
@@ -194,9 +195,10 @@ int dcache_readdir(struct file *file, struct dir_context *ctx)
 	if (ctx->pos == 2)
 		p = &dentry->d_subdirs;
 	while ((next = next_positive(dentry, p, 1)) != NULL) {
-		if (!dir_emit(ctx, next->d_name.name, next->d_name.len,
+		if (!filter || filter(next))
+			if (!dir_emit(ctx, next->d_name.name, next->d_name.len,
 			      d_inode(next)->i_ino, dt_type(d_inode(next))))
-			break;
+				break;
 		moved = true;
 		p = &next->d_child;
 		ctx->pos++;
@@ -206,6 +208,18 @@ int dcache_readdir(struct file *file, struct dir_context *ctx)
 	return 0;
 }
 EXPORT_SYMBOL(dcache_readdir);
+
+int dcache_readdir(struct file *filp, struct dir_context *ctx)
+{
+	return do_dcache_readdir_filter(filp, ctx, NULL);
+}
+EXPORT_SYMBOL(dcache_readdir_filter);
+
+int dcache_readdir_filter(struct file *filp, struct dir_context *ctx,
+			  int (*filter)(struct dentry *))
+{
+	return do_dcache_readdir_filter(filp, ctx, filter);
+}
 
 ssize_t generic_read_dir(struct file *filp, char __user *buf, size_t siz, loff_t *ppos)
 {

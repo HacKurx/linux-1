@@ -10,7 +10,8 @@ enum pid_type
 	PIDTYPE_SID,
 	PIDTYPE_MAX,
 	/* only valid to __task_pid_nr_ns() */
-	__PIDTYPE_TGID
+	__PIDTYPE_TGID,
+	__PIDTYPE_REALPID
 };
 
 /*
@@ -171,7 +172,8 @@ static inline pid_t pid_nr(struct pid *pid)
 	return nr;
 }
 
-pid_t pid_nr_ns(const struct pid *pid, const struct pid_namespace *ns);
+pid_t pid_nr_ns(const struct pid *pid, struct pid_namespace *ns);
+pid_t pid_unmapped_nr_ns(const struct pid *pid, struct pid_namespace *ns);
 pid_t pid_vnr(const struct pid *pid);
 
 #define do_each_pid_task(pid, type, task)				\

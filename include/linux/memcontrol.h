@@ -92,6 +92,7 @@ enum mem_cgroup_events_target {
 	MEM_CGROUP_NTARGETS,
 };
 
+
 #ifdef CONFIG_MEMCG
 
 #define MEM_CGROUP_ID_SHIFT	16
@@ -401,6 +402,12 @@ static inline bool mem_cgroup_is_descendant(struct mem_cgroup *memcg,
 		return false;
 	return cgroup_is_descendant(memcg->css.cgroup, root->css.cgroup);
 }
+
+extern unsigned long mem_cgroup_mem_usage_pages(struct mem_cgroup *memcg);
+extern unsigned long mem_cgroup_mem_limit_pages(struct mem_cgroup *memcg);
+extern unsigned long mem_cgroup_memsw_usage_pages(struct mem_cgroup *memcg);
+extern unsigned long mem_cgroup_memsw_limit_pages(struct mem_cgroup *memcg);
+extern void dump_mem_cgroup(struct mem_cgroup *memcg);
 
 static inline bool mm_match_cgroup(struct mm_struct *mm,
 				   struct mem_cgroup *memcg)

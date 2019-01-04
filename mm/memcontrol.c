@@ -2825,6 +2825,41 @@ static u64 mem_cgroup_read_u64(struct cgroup_subsys_state *css,
 	}
 }
 
+unsigned long mem_cgroup_mem_usage_pages(struct mem_cgroup *memcg)
+{
+	return mem_cgroup_usage(memcg, false);
+}
+
+unsigned long mem_cgroup_mem_limit_pages(struct mem_cgroup *memcg)
+{
+	return memcg->memory.limit;
+}
+
+unsigned long mem_cgroup_memsw_usage_pages(struct mem_cgroup *memcg)
+{
+	return mem_cgroup_usage(memcg, true);
+}
+
+unsigned long mem_cgroup_memsw_limit_pages(struct mem_cgroup *memcg)
+{
+	return memcg->memsw.limit;
+}
+
+void dump_mem_cgroup(struct mem_cgroup *memcg)
+{
+	printk(KERN_INFO "memcg: %p/%d:\n"
+			"\tmemory:\t%lu/%lu %lu/%lu\n"
+			"\tmemsw:\t%lu/%lu %lu/%lu\n"
+			"\tkmem:\t%lu/%lu %lu/%lu\n",
+			memcg, memcg->id.id,
+			page_counter_read(&memcg->memory), memcg->memory.limit,
+			memcg->memory.watermark, memcg->memory.failcnt,
+			page_counter_read(&memcg->memsw), memcg->memsw.limit,
+			memcg->memsw.watermark, memcg->memsw.failcnt,
+			page_counter_read(&memcg->kmem), memcg->kmem.limit,
+			memcg->kmem.watermark, memcg->kmem.failcnt);
+}
+
 #ifndef CONFIG_SLOB
 static int memcg_online_kmem(struct mem_cgroup *memcg)
 {

@@ -28,6 +28,7 @@
 #include <linux/times.h>
 #include <linux/ptrace.h>
 #include <linux/gfp.h>
+#include <linux/vs_time.h>
 
 #include <asm/uaccess.h>
 
@@ -1060,7 +1061,7 @@ COMPAT_SYSCALL_DEFINE1(stime, compat_time_t __user *, tptr)
 	if (err)
 		return err;
 
-	do_settimeofday(&tv);
+	vx_settimeofday(&tv);
 	return 0;
 }
 

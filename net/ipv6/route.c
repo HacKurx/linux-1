@@ -3294,7 +3294,8 @@ static int rt6_fill_node(struct net *net,
 				goto nla_put_failure;
 	} else if (dst) {
 		struct in6_addr saddr_buf;
-		if (ip6_route_get_saddr(net, rt, dst, 0, &saddr_buf) == 0 &&
+		if (ip6_route_get_saddr(net, rt, dst, 0, &saddr_buf,
+		    (skb->sk ? skb->sk->sk_nx_info : NULL)) == 0 &&
 		    nla_put_in6_addr(skb, RTA_PREFSRC, &saddr_buf))
 			goto nla_put_failure;
 	}

@@ -27,7 +27,7 @@
 
 /* Version */
 #define OCFS2_MAJOR_REV_LEVEL		0
-#define OCFS2_MINOR_REV_LEVEL          	90
+#define OCFS2_MINOR_REV_LEVEL		90
 
 /*
  * An OCFS2 volume starts this way:
@@ -274,6 +274,11 @@
 #define OCFS2_DIRSYNC_FL		FS_DIRSYNC_FL	/* dirsync behaviour (directories only) */
 #define OCFS2_TOPDIR_FL			FS_TOPDIR_FL	/* Top of directory hierarchies*/
 #define OCFS2_RESERVED_FL		FS_RESERVED_FL	/* reserved for ext2 lib */
+
+#define OCFS2_IXUNLINK_FL		FS_IXUNLINK_FL	/* Immutable invert on unlink */
+
+#define OCFS2_BARRIER_FL		FS_BARRIER_FL	/* Barrier for chroot() */
+#define OCFS2_COW_FL			FS_COW_FL	/* Copy on Write marker */
 
 #define OCFS2_FL_VISIBLE		FS_FL_USER_VISIBLE	/* User visible flags */
 #define OCFS2_FL_MODIFIABLE		FS_FL_USER_MODIFIABLE	/* User modifiable flags */

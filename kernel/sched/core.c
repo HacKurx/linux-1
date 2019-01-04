@@ -75,6 +75,8 @@
 #include <linux/compiler.h>
 #include <linux/frame.h>
 #include <linux/prefetch.h>
+#include <linux/vs_sched.h>
+#include <linux/vs_cvirt.h>
 
 #include <asm/switch_to.h>
 #include <asm/tlb.h>
@@ -3431,6 +3433,7 @@ void __noreturn do_task_dead(void)
 	__set_current_state(TASK_DEAD);
 	current->flags |= PF_NOFREEZE;	/* tell freezer to ignore us */
 	__schedule(false);
+	printk("bad task: %p [%lx]\n", current, current->state);
 	BUG();
 	/* Avoid "noreturn function does return".  */
 	for (;;)
@@ -3827,7 +3830,7 @@ SYSCALL_DEFINE1(nice, int, increment)
 	nice = clamp_val(nice, MIN_NICE, MAX_NICE);
 	if (increment < 0 && (!can_nice(current, nice) ||
 			      gr_handle_chroot_nice()))
-		return -EPERM;
+		return vx_flags(VXF_IGNEG_NICE, 0) ? 0 : -EPERM;
 
 	retval = security_task_setnice(current, nice);
 	if (retval)

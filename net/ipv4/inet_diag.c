@@ -31,6 +31,8 @@
 
 #include <linux/inet.h>
 #include <linux/stddef.h>
+#include <linux/vs_network.h>
+#include <linux/vs_inet.h>
 
 #include <linux/inet_diag.h>
 #include <linux/sock_diag.h>
@@ -879,6 +881,8 @@ void inet_diag_dump_icsk(struct inet_hashinfo *hashinfo, struct sk_buff *skb,
 				if (!net_eq(sock_net(sk), net))
 					continue;
 
+				if (!nx_check(sk->sk_nid, VS_WATCH_P | VS_IDENT))
+					continue;
 				if (num < s_num) {
 					num++;
 					continue;
@@ -940,6 +944,8 @@ skip_listen_ht:
 			int state, res;
 
 			if (!net_eq(sock_net(sk), net))
+				continue;
+			if (!nx_check(sk->sk_nid, VS_WATCH_P | VS_IDENT))
 				continue;
 			if (num < s_num)
 				goto next_normal;

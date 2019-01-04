@@ -5,6 +5,7 @@
 #include <linux/slab.h>
 #include <linux/fs_struct.h>
 #include <linux/grsecurity.h>
+#include <linux/vserver/global.h>
 #include "internal.h"
 
 /*
@@ -97,6 +98,7 @@ void free_fs_struct(struct fs_struct *fs)
 	gr_dec_chroot_refcnts(fs->root.dentry, fs->root.mnt);
 	path_put(&fs->root);
 	path_put(&fs->pwd);
+	atomic_dec(&vs_global_fs);
 	kmem_cache_free(fs_cachep, fs);
 }
 
@@ -139,6 +141,7 @@ struct fs_struct *copy_fs_struct(struct fs_struct *old)
 		path_get(&fs->pwd);
 		spin_unlock(&old->lock);
 		gr_inc_chroot_refcnts(fs->root.dentry, fs->root.mnt);
+		atomic_inc(&vs_global_fs);
 	}
 	return fs;
 }

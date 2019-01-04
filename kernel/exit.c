@@ -48,6 +48,10 @@
 #include <linux/fs_struct.h>
 #include <linux/init_task.h>
 #include <linux/perf_event.h>
+#include <linux/vs_limit.h>
+#include <linux/vs_context.h>
+#include <linux/vs_network.h>
+#include <linux/vs_pid.h>
 #include <trace/events/sched.h>
 #include <linux/hw_breakpoint.h>
 #include <linux/oom.h>
@@ -534,14 +538,24 @@ static struct task_struct *find_child_reaper(struct task_struct *father)
 {
 	struct pid_namespace *pid_ns = task_active_pid_ns(father);
 	struct task_struct *reaper = pid_ns->child_reaper;
+	struct vx_info *vxi = task_get_vx_info(father);
+
+	if (vxi) {
+		BUG_ON(!vxi->vx_reaper);
+		if (vxi->vx_reaper != init_pid_ns.child_reaper &&
+		    vxi->vx_reaper != father) {
+			reaper = vxi->vx_reaper;
+			goto out_put;
+		}
+	}
 
 	if (likely(reaper != father))
-		return reaper;
+		goto out_put;
 
 	reaper = find_alive_thread(father);
 	if (reaper) {
 		pid_ns->child_reaper = reaper;
-		return reaper;
+		goto out_put;
 	}
 
 	write_unlock_irq(&tasklist_lock);
@@ -552,7 +566,10 @@ static struct task_struct *find_child_reaper(struct task_struct *father)
 	zap_pid_ns_processes(pid_ns);
 	write_lock_irq(&tasklist_lock);
 
-	return father;
+	reaper = father;
+out_put:
+	put_vx_info(vxi);
+	return reaper;
 }
 
 /*
@@ -642,9 +659,13 @@ static void forget_original_parent(struct task_struct *father,
 		return;
 
 	reaper = find_new_reaper(father, reaper);
-	list_for_each_entry(p, &father->children, sibling) {
+	for (p = list_first_entry(&father->children, struct task_struct, sibling);
+	     &p->sibling != &father->children; ) {
+		struct task_struct *next, *this_reaper = reaper;
+		if (p == reaper)
+			this_reaper = task_active_pid_ns(reaper)->child_reaper;
 		for_each_thread(p, t) {
-			t->real_parent = reaper;
+			t->real_parent = this_reaper;
 			BUG_ON((!t->ptrace) != (t->parent == father));
 			if (likely(!t->ptrace))
 				t->parent = t->real_parent;
@@ -656,10 +677,13 @@ static void forget_original_parent(struct task_struct *father,
 		 * If this is a threaded reparent there is no need to
 		 * notify anyone anything has happened.
 		 */
-		if (!same_thread_group(reaper, father))
+		if (!same_thread_group(this_reaper, father))
 			reparent_leader(father, p, dead);
+		next = list_next_entry(p, sibling);
+		list_add(&p->sibling, &this_reaper->children);
+		p = next;
 	}
-	list_splice_tail_init(&father->children, &reaper->children);
+	INIT_LIST_HEAD(&father->children);
 }
 
 /*
@@ -852,6 +876,9 @@ void __noreturn do_exit(long code)
 	 */
 	flush_ptrace_hw_breakpoint(tsk);
 
+	/* needs to stay before exit_notify() */
+	exit_vx_info_early(tsk, code);
+
 	TASKS_RCU(preempt_disable());
 	TASKS_RCU(tasks_rcu_i = __srcu_read_lock(&tasks_rcu_exit_srcu));
 	TASKS_RCU(preempt_enable());
@@ -883,6 +910,10 @@ void __noreturn do_exit(long code)
 		put_page(tsk->task_frag.page);
 
 	validate_creds_for_do_exit(tsk);
+
+	/* needs to stay after exit_notify() and before preempt_disable() */
+	exit_vx_info(tsk, code);
+	exit_nx_info(tsk);
 
 	check_stack_usage();
 	preempt_disable();

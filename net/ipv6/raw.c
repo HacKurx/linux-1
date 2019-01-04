@@ -291,6 +291,13 @@ static int rawv6_bind(struct sock *sk, struct sockaddr *uaddr, int addr_len)
 				goto out_unlock;
 		}
 
+		if (!v6_addr_in_nx_info(sk->sk_nx_info, &addr->sin6_addr, -1)) {
+			err = -EADDRNOTAVAIL;
+			if (dev)
+				dev_put(dev);
+			goto out;
+		}
+
 		/* ipv4 addr of the socket is invalid.  Only the
 		 * unspecified and mapped address have a v4 equivalent.
 		 */

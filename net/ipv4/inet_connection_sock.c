@@ -16,6 +16,7 @@
 #include <linux/module.h>
 #include <linux/jhash.h>
 
+#include <net/addrconf.h>
 #include <net/inet_connection_sock.h>
 #include <net/inet_hashtables.h>
 #include <net/inet_timewait_sock.h>
@@ -43,6 +44,7 @@ void inet_get_local_port_range(struct net *net, int *low, int *high)
 	} while (read_seqretry(&net->ipv4.ip_local_ports.lock, seq));
 }
 EXPORT_SYMBOL(inet_get_local_port_range);
+
 
 int inet_csk_bind_conflict(const struct sock *sk,
 			   const struct inet_bind_bucket *tb, bool relax)
@@ -72,15 +74,13 @@ int inet_csk_bind_conflict(const struct sock *sk,
 			     (sk2->sk_state != TCP_TIME_WAIT &&
 			     !uid_eq(uid, sock_i_uid(sk2))))) {
 
-				if (!sk2->sk_rcv_saddr || !sk->sk_rcv_saddr ||
-				    sk2->sk_rcv_saddr == sk->sk_rcv_saddr)
+				if (ipv4_rcv_saddr_equal(sk, sk2, true))
 					break;
 			}
 			if (!relax && reuse && sk2->sk_reuse &&
 			    sk2->sk_state != TCP_LISTEN) {
 
-				if (!sk2->sk_rcv_saddr || !sk->sk_rcv_saddr ||
-				    sk2->sk_rcv_saddr == sk->sk_rcv_saddr)
+				if (ipv4_rcv_saddr_equal(sk, sk2, true))
 					break;
 			}
 		}

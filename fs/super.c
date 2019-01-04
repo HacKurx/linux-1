@@ -34,6 +34,8 @@
 #include <linux/fsnotify.h>
 #include <linux/lockdep.h>
 #include <linux/user_namespace.h>
+#include <linux/magic.h>
+#include <linux/vs_context.h>
 #include "internal.h"
 
 
@@ -986,7 +988,8 @@ struct dentry *mount_ns(struct file_system_type *fs_type,
 	/* Don't allow mounting unless the caller has CAP_SYS_ADMIN
 	 * over the namespace.
 	 */
-	if (!(flags & MS_KERNMOUNT) && !ns_capable(user_ns, CAP_SYS_ADMIN))
+	if (!(flags & MS_KERNMOUNT) &&
+	    !vx_ns_capable(user_ns, CAP_SYS_ADMIN, VXC_SECURE_MOUNT))
 		return ERR_PTR(-EPERM);
 
 	sb = sget_userns(fs_type, ns_test_super, ns_set_super, flags,
@@ -1195,6 +1198,13 @@ mount_fs(struct file_system_type *type, int flags, const char *name, void *data)
 	BUG_ON(!sb);
 	WARN_ON(!sb->s_bdi);
 	sb->s_flags |= MS_BORN;
+
+	error = -EPERM;
+	if (!vx_capable(CAP_SYS_ADMIN, VXC_BINARY_MOUNT) &&
+		!sb->s_bdev &&
+		(sb->s_magic != PROC_SUPER_MAGIC) &&
+		(sb->s_magic != DEVPTS_SUPER_MAGIC))
+		goto out_sb;
 
 	error = security_sb_kern_mount(sb, flags, secdata);
 	if (error)

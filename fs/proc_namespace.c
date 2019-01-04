@@ -46,6 +46,8 @@ static int show_sb_opts(struct seq_file *m, struct super_block *sb)
 		{ MS_DIRSYNC, ",dirsync" },
 		{ MS_MANDLOCK, ",mand" },
 		{ MS_LAZYTIME, ",lazytime" },
+		{ MS_TAGGED, ",tag" },
+		{ MS_NOTAGCHECK, ",notagcheck" },
 		{ 0, NULL }
 	};
 	const struct proc_fs_info *fs_infop;
@@ -82,6 +84,38 @@ static inline void mangle(struct seq_file *m, const char *s)
 	seq_escape(m, s, " \t\n\\");
 }
 
+#ifdef	CONFIG_VSERVER_EXTRA_MNT_CHECK
+
+static int mnt_is_reachable(struct vfsmount *vfsmnt)
+{
+	struct path root;
+	struct dentry *point;
+	struct mount *mnt = real_mount(vfsmnt);
+	struct mount *root_mnt;
+	int ret;
+
+	if (mnt == mnt->mnt_ns->root)
+		return 1;
+
+	rcu_read_lock();
+	root = current->fs->root;
+	root_mnt = real_mount(root.mnt);
+	point = root.dentry;
+
+	while ((mnt != mnt->mnt_parent) && (mnt != root_mnt)) {
+		point = mnt->mnt_mountpoint;
+		mnt = mnt->mnt_parent;
+	}
+	rcu_read_unlock();
+
+	ret = (mnt == root_mnt) && is_subdir(point, root.dentry);
+	return ret;
+}
+
+#else
+#define	mnt_is_reachable(v)	(1)
+#endif
+
 static void show_type(struct seq_file *m, struct super_block *sb)
 {
 	mangle(m, sb->s_type->name);
@@ -99,6 +133,17 @@ static int show_vfsmnt(struct seq_file *m, struct vfsmount *mnt)
 	struct super_block *sb = mnt_path.dentry->d_sb;
 	int err;
 
+	if (vx_flags(VXF_HIDE_MOUNT, 0))
+		return SEQ_SKIP;
+	if (!mnt_is_reachable(mnt) && !vx_check(0, VS_WATCH_P))
+		return SEQ_SKIP;
+
+	if (!vx_check(0, VS_ADMIN|VS_WATCH) &&
+		mnt == current->fs->root.mnt) {
+		seq_puts(m, "/dev/root / ");
+		goto type;
+	}
+
 	if (sb->s_op->show_devname) {
 		err = sb->s_op->show_devname(m, mnt_path.dentry);
 		if (err)
@@ -112,6 +157,7 @@ static int show_vfsmnt(struct seq_file *m, struct vfsmount *mnt)
 	if (err)
 		goto out;
 	seq_putc(m, ' ');
+type:
 	show_type(m, sb);
 	seq_puts(m, __mnt_is_readonly(mnt) ? " ro" : " rw");
 	err = show_sb_opts(m, sb);
@@ -132,6 +178,11 @@ static int show_mountinfo(struct seq_file *m, struct vfsmount *mnt)
 	struct super_block *sb = mnt->mnt_sb;
 	struct path mnt_path = { .dentry = mnt->mnt_root, .mnt = mnt };
 	int err;
+
+	if (vx_flags(VXF_HIDE_MOUNT, 0))
+		return SEQ_SKIP;
+	if (!mnt_is_reachable(mnt) && !vx_check(0, VS_WATCH_P))
+		return SEQ_SKIP;
 
 	seq_printf(m, "%i %i %u:%u ", r->mnt_id, r->mnt_parent->mnt_id,
 		   MAJOR(sb->s_dev), MINOR(sb->s_dev));
@@ -195,6 +246,17 @@ static int show_vfsstat(struct seq_file *m, struct vfsmount *mnt)
 	struct super_block *sb = mnt_path.dentry->d_sb;
 	int err;
 
+	if (vx_flags(VXF_HIDE_MOUNT, 0))
+		return SEQ_SKIP;
+	if (!mnt_is_reachable(mnt) && !vx_check(0, VS_WATCH_P))
+		return SEQ_SKIP;
+
+	if (!vx_check(0, VS_ADMIN|VS_WATCH) &&
+	    mnt == current->fs->root.mnt) {
+		seq_puts(m, "device /dev/root mounted on / ");
+		goto type;
+	}
+
 	/* device */
 	if (sb->s_op->show_devname) {
 		seq_puts(m, "device ");
@@ -216,7 +278,7 @@ static int show_vfsstat(struct seq_file *m, struct vfsmount *mnt)
 	if (err)
 		goto out;
 	seq_putc(m, ' ');
-
+type:
 	/* file system type */
 	seq_puts(m, "with fstype ");
 	show_type(m, sb);

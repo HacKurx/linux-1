@@ -187,6 +187,10 @@ struct sock_common {
 	struct in6_addr		skc_v6_daddr;
 	struct in6_addr		skc_v6_rcv_saddr;
 #endif
+	vxid_t			skc_xid;
+	struct vx_info		*skc_vx_info;
+	vnid_t			skc_nid;
+	struct nx_info		*skc_nx_info;
 
 	atomic64_unchecked_t	skc_cookie;
 
@@ -336,8 +340,12 @@ struct sock {
 #define sk_prot			__sk_common.skc_prot
 #define sk_net			__sk_common.skc_net
 #define sk_v6_daddr		__sk_common.skc_v6_daddr
-#define sk_v6_rcv_saddr	__sk_common.skc_v6_rcv_saddr
+#define sk_v6_rcv_saddr		__sk_common.skc_v6_rcv_saddr
 #define sk_cookie		__sk_common.skc_cookie
+#define sk_xid			__sk_common.skc_xid
+#define sk_vx_info		__sk_common.skc_vx_info
+#define sk_nid			__sk_common.skc_nid
+#define sk_nx_info		__sk_common.skc_nx_info
 #define sk_incoming_cpu		__sk_common.skc_incoming_cpu
 #define sk_flags		__sk_common.skc_flags
 #define sk_rxhash		__sk_common.skc_rxhash

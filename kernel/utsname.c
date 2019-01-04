@@ -16,6 +16,7 @@
 #include <linux/slab.h>
 #include <linux/user_namespace.h>
 #include <linux/proc_ns.h>
+#include <linux/vserver/global.h>
 
 static struct ucounts *inc_uts_namespaces(struct user_namespace *ns)
 {
@@ -32,8 +33,10 @@ static struct uts_namespace *create_uts_ns(void)
 	struct uts_namespace *uts_ns;
 
 	uts_ns = kmalloc(sizeof(struct uts_namespace), GFP_KERNEL);
-	if (uts_ns)
+	if (uts_ns) {
 		kref_init(&uts_ns->kref);
+		atomic_inc(&vs_global_uts_ns);
+	}
 	return uts_ns;
 }
 
@@ -111,6 +114,7 @@ void free_uts_ns(struct kref *kref)
 	dec_uts_namespaces(ns->ucounts);
 	put_user_ns(ns->user_ns);
 	ns_free_inum(&ns->ns);
+	atomic_dec(&vs_global_uts_ns);
 	kfree(ns);
 }
 

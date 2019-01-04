@@ -62,6 +62,8 @@
 #include <asm/cacheflush.h>
 #include <linux/hash.h>
 #include <linux/genetlink.h>
+#include <linux/vs_context.h>
+#include <linux/vs_network.h>
 #include <linux/nospec.h>
 
 #include <net/net_namespace.h>
@@ -2480,7 +2482,8 @@ static void *__netlink_seq_next(struct seq_file *seq)
 			if (err)
 				return ERR_PTR(err);
 		}
-	} while (sock_net(&nlk->sk) != seq_file_net(seq));
+	} while ((sock_net(&nlk->sk) != seq_file_net(seq)) ||
+		!nx_check(nlk->sk.sk_nid, VS_WATCH_P | VS_IDENT));
 
 	return nlk;
 }

@@ -327,7 +327,7 @@ enum {
 #ifdef CONFIG_BTRFS_DEBUG
 	Opt_fragment_data, Opt_fragment_metadata, Opt_fragment_all,
 #endif
-	Opt_err,
+	Opt_tag, Opt_notag, Opt_tagid, Opt_err,
 };
 
 static const match_table_t tokens = {
@@ -388,6 +388,9 @@ static const match_table_t tokens = {
 	{Opt_fragment_metadata, "fragment=metadata"},
 	{Opt_fragment_all, "fragment=all"},
 #endif
+	{Opt_tag, "tag"},
+	{Opt_notag, "notag"},
+	{Opt_tagid, "tagid=%u"},
 	{Opt_err, NULL},
 };
 
@@ -831,6 +834,22 @@ int btrfs_parse_options(struct btrfs_root *root, char *options,
 		case Opt_fragment_data:
 			btrfs_info(root->fs_info, "fragmenting data");
 			btrfs_set_opt(info->mount_opt, FRAGMENT_DATA);
+			break;
+#endif
+#ifndef CONFIG_TAGGING_NONE
+		case Opt_tag:
+			printk(KERN_INFO "btrfs: use tagging\n");
+			btrfs_set_opt(info->mount_opt, TAGGED);
+			break;
+		case Opt_notag:
+			printk(KERN_INFO "btrfs: disabled tagging\n");
+			btrfs_clear_opt(info->mount_opt, TAGGED);
+			break;
+#endif
+#ifdef CONFIG_PROPAGATE
+		case Opt_tagid:
+			/* use args[0] */
+			btrfs_set_opt(info->mount_opt, TAGGED);
 			break;
 #endif
 		case Opt_err:
@@ -1753,6 +1772,12 @@ static int btrfs_remount(struct super_block *sb, int *flags, char *data)
 	btrfs_remount_begin(fs_info, old_opts, *flags);
 	btrfs_resize_thread_pool(fs_info,
 		fs_info->thread_pool_size, old_thread_pool_size);
+
+	if (btrfs_test_opt(fs_info, TAGGED) && !(sb->s_flags & MS_TAGGED)) {
+		printk("btrfs: %s: tagging not permitted on remount.\n",
+		       sb->s_id);
+		return -EINVAL;
+	}
 
 	if ((*flags & MS_RDONLY) == (sb->s_flags & MS_RDONLY))
 		goto out;

@@ -38,6 +38,8 @@
 #include <linux/kthread.h>
 #include <linux/init.h>
 #include <linux/mmu_notifier.h>
+#include <linux/reboot.h>
+#include <linux/vs_context.h>
 
 #include <asm/tlb.h>
 #include "internal.h"
@@ -142,9 +144,16 @@ static inline bool is_memcg_oom(struct oom_control *oc)
 static bool oom_unkillable_task(struct task_struct *p,
 		struct mem_cgroup *memcg, const nodemask_t *nodemask)
 {
-	if (is_global_init(p))
+	unsigned xid = vx_current_xid();
+
+	/* skip the init task, global and per guest */
+	if (task_is_init(p))
 		return true;
 	if (p->flags & PF_KTHREAD)
+		return true;
+
+	/* skip other guest and host processes if oom in guest */
+	if (xid && vx_task_xid(p) != xid)
 		return true;
 
 	/* When mem_cgroup_out_of_memory() and p is not member of the group */
@@ -851,8 +860,8 @@ static void oom_kill_process(struct oom_control *oc, const char *message)
 	if (__ratelimit(&oom_rs))
 		dump_header(oc, p);
 
-	pr_err("%s: Kill process %d (%s) score %u or sacrifice child\n",
-		message, task_pid_nr(p), p->comm, points);
+	pr_err("%s: Kill process %d:#%u (%s) score %u or sacrifice child\n",
+		message, task_pid_nr(p), p->xid, p->comm, points);
 
 	/*
 	 * If any of p's children has a different mm and is eligible for kill,
@@ -902,8 +911,8 @@ static void oom_kill_process(struct oom_control *oc, const char *message)
 	 */
 	do_send_sig_info(SIGKILL, SEND_SIG_FORCED, victim, true);
 	mark_oom_victim(victim);
-	pr_err("Killed process %d (%s) total-vm:%lukB, anon-rss:%lukB, file-rss:%lukB, shmem-rss:%lukB\n",
-		task_pid_nr(victim), victim->comm, K(victim->mm->total_vm),
+	pr_err("Killed process %d:%u (%s) total-vm:%lukB, anon-rss:%lukB, file-rss:%lukB, shmem-rss:%lukB\n",
+		task_pid_nr(victim), victim->xid, victim->comm, K(victim->mm->total_vm),
 		K(get_mm_counter(victim->mm, MM_ANONPAGES)),
 		K(get_mm_counter(victim->mm, MM_FILEPAGES)),
 		K(get_mm_counter(victim->mm, MM_SHMEMPAGES)));
@@ -949,6 +958,8 @@ static void oom_kill_process(struct oom_control *oc, const char *message)
 	put_task_struct(victim);
 }
 #undef K
+
+long vs_oom_action(unsigned int);
 
 /*
  * Determines whether the kernel must panic because of the panic_on_oom sysctl.
@@ -1055,7 +1066,12 @@ bool out_of_memory(struct oom_control *oc)
 	/* Found nothing?!?! Either we hang forever, or we panic. */
 	if (!oc->chosen && !is_sysrq_oom(oc) && !is_memcg_oom(oc)) {
 		dump_header(oc, NULL);
-		panic("Out of memory and no killable processes...\n");
+
+		/* vserver: avoid panic for guest OOM */
+		if (vx_current_xid())
+			vs_oom_action(LINUX_REBOOT_CMD_OOM);
+		else
+			panic("Out of memory and no killable processes...\n");
 	}
 	if (oc->chosen && oc->chosen != (void *)-1UL) {
 		oom_kill_process(oc, !is_memcg_oom(oc) ? "Out of memory" :

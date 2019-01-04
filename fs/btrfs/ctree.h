@@ -1321,6 +1321,8 @@ static inline u32 BTRFS_MAX_XATTR_SIZE(const struct btrfs_root *root)
 #define BTRFS_DEFAULT_COMMIT_INTERVAL	(30)
 #define BTRFS_DEFAULT_MAX_INLINE	(2048)
 
+#define BTRFS_MOUNT_TAGGED		(1 << 24)
+
 #define btrfs_clear_opt(o, opt)		((o) &= ~BTRFS_MOUNT_##opt)
 #define btrfs_set_opt(o, opt)		((o) |= BTRFS_MOUNT_##opt)
 #define btrfs_raw_test_opt(o, opt)	((o) & BTRFS_MOUNT_##opt)
@@ -1671,6 +1673,7 @@ BTRFS_SETGET_FUNCS(inode_block_group, struct btrfs_inode_item, block_group, 64);
 BTRFS_SETGET_FUNCS(inode_nlink, struct btrfs_inode_item, nlink, 32);
 BTRFS_SETGET_FUNCS(inode_uid, struct btrfs_inode_item, uid, 32);
 BTRFS_SETGET_FUNCS(inode_gid, struct btrfs_inode_item, gid, 32);
+BTRFS_SETGET_FUNCS(inode_tag, struct btrfs_inode_item, tag, 16);
 BTRFS_SETGET_FUNCS(inode_mode, struct btrfs_inode_item, mode, 32);
 BTRFS_SETGET_FUNCS(inode_rdev, struct btrfs_inode_item, rdev, 64);
 BTRFS_SETGET_FUNCS(inode_flags, struct btrfs_inode_item, flags, 64);
@@ -1718,8 +1721,12 @@ BTRFS_SETGET_FUNCS(extent_flags, struct btrfs_extent_item, flags, 64);
 
 BTRFS_SETGET_FUNCS(extent_refs_v0, struct btrfs_extent_item_v0, refs, 32);
 
+#define BTRFS_INODE_IXUNLINK		(1 << 24)
+#define BTRFS_INODE_BARRIER		(1 << 25)
+#define BTRFS_INODE_COW			(1 << 26)
 
 BTRFS_SETGET_FUNCS(tree_block_level, struct btrfs_tree_block_info, level, 8);
+
 
 static inline void btrfs_tree_block_key(struct extent_buffer *eb,
 					struct btrfs_tree_block_info *item,
@@ -3201,6 +3208,7 @@ int btrfs_ioctl_get_supported_features(void __user *arg);
 void btrfs_update_iflags(struct inode *inode);
 void btrfs_inherit_iflags(struct inode *inode, struct inode *dir);
 int btrfs_is_empty_uuid(u8 *uuid);
+int btrfs_sync_flags(struct inode *inode, int, int);
 int btrfs_defrag_file(struct inode *inode, struct file *file,
 		      struct btrfs_ioctl_defrag_range_args *range,
 		      u64 newer_than, unsigned long max_pages);

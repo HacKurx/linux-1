@@ -1115,7 +1115,7 @@ route_lookup:
 		}
 		if (t->parms.collect_md &&
 		    ipv6_dev_get_saddr(net, ip6_dst_idev(dst)->dev,
-				       &fl6->daddr, 0, &fl6->saddr))
+				       &fl6->daddr, 0, &fl6->saddr, NULL))
 			goto tx_err_link_failure;
 		ndst = dst;
 	}

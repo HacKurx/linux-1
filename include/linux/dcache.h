@@ -311,8 +311,10 @@ extern char *dentry_path(struct dentry *, char *, int);
  */
 static inline struct dentry *dget_dlock(struct dentry *dentry)
 {
-	if (dentry)
+	if (dentry) {
 		__lockref_inc(&dentry->d_lockref);
+		// vx_dentry_inc(dentry);
+	}
 	return dentry;
 }
 

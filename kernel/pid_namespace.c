@@ -18,6 +18,7 @@
 #include <linux/proc_ns.h>
 #include <linux/reboot.h>
 #include <linux/export.h>
+#include <linux/vserver/global.h>
 
 struct pid_cache {
 	int nr_ids;
@@ -124,6 +125,7 @@ static struct pid_namespace *create_pid_namespace(struct user_namespace *user_ns
 	ns->ns.ops = &pidns_operations;
 
 	kref_init(&ns->kref);
+	atomic_inc(&vs_global_pid_ns);
 	ns->level = level;
 	ns->parent = get_pid_ns(parent_pid_ns);
 	ns->user_ns = get_user_ns(user_ns);
@@ -142,6 +144,7 @@ static struct pid_namespace *create_pid_namespace(struct user_namespace *user_ns
 out_free_map:
 	kfree(ns->pidmap[0].page);
 out_free:
+	atomic_dec(&vs_global_pid_ns);
 	kmem_cache_free(pid_ns_cachep, ns);
 out_dec:
 	dec_pid_namespaces(ucounts);

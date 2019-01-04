@@ -101,10 +101,12 @@
 
 #include <net/sock.h>
 #include <linux/netfilter.h>
+#include <linux/vs_socket.h>
+#include <linux/vs_inet.h>
+#include <linux/vs_inet6.h>
 
 #include <linux/if_tun.h>
 #include <linux/ipv6_route.h>
-#include <linux/route.h>
 #include <linux/sockios.h>
 #include <linux/atalk.h>
 #include <net/busy_poll.h>
@@ -621,8 +623,24 @@ EXPORT_SYMBOL(__sock_tx_timestamp);
 
 static inline int sock_sendmsg_nosec(struct socket *sock, struct msghdr *msg)
 {
-	int ret = sock->ops->sendmsg(sock, msg, msg_data_left(msg));
-	BUG_ON(ret == -EIOCBQUEUED);
+	size_t size = msg_data_left(msg);
+	int ret = sock->ops->sendmsg(sock, msg, size);
+#if 0
+	if (sock->sk) {
+		if (!ret)
+			vx_sock_fail(sock->sk, size);
+		else
+			vx_sock_send(sock->sk, size);
+	}
+#endif
+	vxdprintk(VXD_CBIT(net, 7),
+		"sock_sendmsg_nosec: %p[%p,%p,%p;%d/%d]:%zu/%zu",
+		sock, sock->sk,
+		(sock->sk)?sock->sk->sk_nx_info:0,
+		(sock->sk)?sock->sk->sk_vx_info:0,
+		(sock->sk)?sock->sk->sk_xid:0,
+		(sock->sk)?sock->sk->sk_nid:0,
+		size, msg_data_left(msg));
 	return ret;
 }
 
@@ -1114,6 +1132,13 @@ int __sock_create(struct net *net, int family, int type, int protocol,
 	if (protocol < 0)
 		return -EINVAL;
 
+	if (!nx_check(0, VS_ADMIN)) {
+		if (family == PF_INET && !current_nx_info_has_v4())
+			return -EAFNOSUPPORT;
+		if (family == PF_INET6 && !current_nx_info_has_v6())
+			return -EAFNOSUPPORT;
+	}
+
 	/* Compatibility.
 
 	   This uglymoron is moved from INET layer to here to avoid
@@ -1258,6 +1283,7 @@ SYSCALL_DEFINE3(socket, int, family, int, type, int, protocol)
 	if (retval < 0)
 		goto out;
 
+	set_bit(SOCK_USER_SOCKET, &sock->flags);
 	retval = sock_map_fd(sock, flags & (O_CLOEXEC | O_NONBLOCK));
 	if (retval < 0)
 		goto out_release;
@@ -1299,10 +1325,12 @@ SYSCALL_DEFINE4(socketpair, int, family, int, type, int, protocol,
 	err = sock_create(family, type, protocol, &sock1);
 	if (err < 0)
 		goto out;
+	set_bit(SOCK_USER_SOCKET, &sock1->flags);
 
 	err = sock_create(family, type, protocol, &sock2);
 	if (err < 0)
 		goto out_release_1;
+	set_bit(SOCK_USER_SOCKET, &sock2->flags);
 
 	err = sock1->ops->socketpair(sock1, sock2);
 	if (err < 0)

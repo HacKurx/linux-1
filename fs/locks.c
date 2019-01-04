@@ -127,6 +127,8 @@
 #include <linux/pid_namespace.h>
 #include <linux/hashtable.h>
 #include <linux/percpu.h>
+#include <linux/vs_base.h>
+#include <linux/vs_limit.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/filelock.h>
@@ -292,10 +294,16 @@ static void locks_init_lock_heads(struct file_lock *fl)
 /* Allocate an empty lock structure. */
 struct file_lock *locks_alloc_lock(void)
 {
-	struct file_lock *fl = kmem_cache_zalloc(filelock_cache, GFP_KERNEL);
+	struct file_lock *fl;
 
-	if (fl)
+	if (!vx_locks_avail(1))
+		return NULL;
+
+	fl = kmem_cache_zalloc(filelock_cache, GFP_KERNEL);
+	if (fl) {
 		locks_init_lock_heads(fl);
+		fl->fl_xid = -1;
+	}
 
 	return fl;
 }
@@ -327,6 +335,7 @@ void locks_free_lock(struct file_lock *fl)
 	BUG_ON(!list_empty(&fl->fl_block));
 	BUG_ON(!hlist_unhashed(&fl->fl_link));
 
+	vx_locks_dec(fl);
 	locks_release_private(fl);
 	kmem_cache_free(filelock_cache, fl);
 }
@@ -348,6 +357,7 @@ void locks_init_lock(struct file_lock *fl)
 {
 	memset(fl, 0, sizeof(struct file_lock));
 	locks_init_lock_heads(fl);
+	fl->fl_xid = -1;
 }
 
 EXPORT_SYMBOL(locks_init_lock);
@@ -365,6 +375,7 @@ void locks_copy_conflock(struct file_lock *new, struct file_lock *fl)
 	new->fl_start = fl->fl_start;
 	new->fl_end = fl->fl_end;
 	new->fl_lmops = fl->fl_lmops;
+	new->fl_xid = fl->fl_xid;
 	new->fl_ops = NULL;
 
 	if (fl->fl_lmops) {
@@ -426,7 +437,10 @@ flock_make_lock(struct file *filp, unsigned int cmd)
 	fl->fl_flags = FL_FLOCK;
 	fl->fl_type = type;
 	fl->fl_end = OFFSET_MAX;
-	
+
+	vxd_assert(filp->f_xid == vx_current_xid(),
+		   "f_xid(%d) == current(%d)", filp->f_xid, vx_current_xid());
+	fl->fl_xid = filp->f_xid;
 	return fl;
 }
 
@@ -548,6 +562,7 @@ static int lease_init(struct file *filp, long type, struct file_lock *fl)
 
 	fl->fl_owner = filp;
 	fl->fl_pid = current->tgid;
+	fl->fl_xid = vx_current_xid();
 
 	fl->fl_file = filp;
 	fl->fl_flags = FL_LEASE;
@@ -566,6 +581,11 @@ static struct file_lock *lease_alloc(struct file *filp, long type)
 
 	if (fl == NULL)
 		return ERR_PTR(error);
+
+	fl->fl_xid = vx_current_xid();
+	if (filp)
+		vxd_assert(filp->f_xid == fl->fl_xid,
+			   "f_xid(%d) == fl_xid(%d)", filp->f_xid, fl->fl_xid);
 
 	error = lease_init(filp, type, fl);
 	if (error) {
@@ -736,6 +756,7 @@ locks_insert_lock_ctx(struct file_lock *fl, struct list_head *before)
 	fl->fl_nspid = get_pid(task_tgid(current));
 	list_add_tail(&fl->fl_list, before);
 	locks_insert_global_locks(fl);
+	vx_locks_inc(fl);
 }
 
 static void
@@ -748,6 +769,7 @@ locks_unlink_lock_ctx(struct file_lock *fl)
 		fl->fl_nspid = NULL;
 	}
 	locks_wake_up_blocks(fl);
+	vx_locks_dec(fl);
 }
 
 static void
@@ -956,6 +978,7 @@ static int flock_lock_inode(struct inode *inode, struct file_lock *request)
 		goto out;
 	}
 
+	new_fl->fl_xid = -1;
 find_conflict:
 	list_for_each_entry(fl, &ctx->flc_flock, fl_list) {
 		if (!flock_locks_conflict(request, fl))
@@ -984,7 +1007,7 @@ out:
 }
 
 static int posix_lock_inode(struct inode *inode, struct file_lock *request,
-			    struct file_lock *conflock)
+			    struct file_lock *conflock, vxid_t xid)
 {
 	struct file_lock *fl, *tmp;
 	struct file_lock *new_fl = NULL;
@@ -1000,6 +1023,9 @@ static int posix_lock_inode(struct inode *inode, struct file_lock *request,
 	if (!ctx)
 		return (request->fl_type == F_UNLCK) ? 0 : -ENOMEM;
 
+	if (xid)
+		vxd_assert(xid == vx_current_xid(),
+			   "xid(%d) == current(%d)", xid, vx_current_xid());
 	/*
 	 * We may need two file_lock structures for this operation,
 	 * so we get them in advance to avoid races.
@@ -1010,7 +1036,11 @@ static int posix_lock_inode(struct inode *inode, struct file_lock *request,
 	    (request->fl_type != F_UNLCK ||
 	     request->fl_start != 0 || request->fl_end != OFFSET_MAX)) {
 		new_fl = locks_alloc_lock();
+		new_fl->fl_xid = xid;
+		// vx_locks_inc(new_fl);
 		new_fl2 = locks_alloc_lock();
+		new_fl2->fl_xid = xid;
+		// vx_locks_inc(new_fl2);
 	}
 
 	percpu_down_read_preempt_disable(&file_rwsem);
@@ -1216,7 +1246,7 @@ static int posix_lock_inode(struct inode *inode, struct file_lock *request,
 int posix_lock_file(struct file *filp, struct file_lock *fl,
 			struct file_lock *conflock)
 {
-	return posix_lock_inode(locks_inode(filp), fl, conflock);
+	return posix_lock_inode(locks_inode(filp), fl, conflock, filp->f_xid);
 }
 EXPORT_SYMBOL(posix_lock_file);
 
@@ -1232,7 +1262,7 @@ static int posix_lock_inode_wait(struct inode *inode, struct file_lock *fl)
 	int error;
 	might_sleep ();
 	for (;;) {
-		error = posix_lock_inode(inode, fl, NULL);
+		error = posix_lock_inode(inode, fl, NULL, 0);
 		if (error != FILE_LOCK_DEFERRED)
 			break;
 		error = wait_event_interruptible(fl->fl_wait, !fl->fl_next);
@@ -1308,10 +1338,13 @@ int locks_mandatory_area(struct inode *inode, struct file *filp, loff_t start,
 	fl.fl_end = end;
 
 	for (;;) {
+		vxid_t f_xid = 0;
+
 		if (filp) {
 			fl.fl_owner = filp;
 			fl.fl_flags &= ~FL_SLEEP;
-			error = posix_lock_inode(inode, &fl, NULL);
+			f_xid = filp->f_xid;
+			error = posix_lock_inode(inode, &fl, NULL, f_xid);
 			if (!error)
 				break;
 		}
@@ -1319,7 +1352,7 @@ int locks_mandatory_area(struct inode *inode, struct file *filp, loff_t start,
 		if (sleep)
 			fl.fl_flags |= FL_SLEEP;
 		fl.fl_owner = current->files;
-		error = posix_lock_inode(inode, &fl, NULL);
+		error = posix_lock_inode(inode, &fl, NULL, f_xid);
 		if (error != FILE_LOCK_DEFERRED)
 			break;
 		error = wait_event_interruptible(fl.fl_wait, !fl.fl_next);
@@ -2229,6 +2262,11 @@ int fcntl_setlk(unsigned int fd, struct file *filp, unsigned int cmd,
 	if (file_lock == NULL)
 		return -ENOLCK;
 
+	vxd_assert(filp->f_xid == vx_current_xid(),
+		"f_xid(%d) == current(%d)", filp->f_xid, vx_current_xid());
+	file_lock->fl_xid = filp->f_xid;
+	// vx_locks_inc(file_lock);
+
 	inode = locks_inode(filp);
 
 	/*
@@ -2373,6 +2411,11 @@ int fcntl_setlk64(unsigned int fd, struct file *filp, unsigned int cmd,
 
 	if (file_lock == NULL)
 		return -ENOLCK;
+
+	vxd_assert(filp->f_xid == vx_current_xid(),
+		"f_xid(%d) == current(%d)", filp->f_xid, vx_current_xid());
+	file_lock->fl_xid = filp->f_xid;
+	// vx_locks_inc(file_lock);
 
 	/*
 	 * This might block, so we do it before checking the inode.
@@ -2710,8 +2753,11 @@ static int locks_show(struct seq_file *f, void *v)
 
 	lock_get_status(f, fl, iter->li_pos, "");
 
-	list_for_each_entry(bfl, &fl->fl_block, fl_block)
+	list_for_each_entry(bfl, &fl->fl_block, fl_block) {
+		if (!vx_check(fl->fl_xid, VS_WATCH_P | VS_IDENT))
+			continue;
 		lock_get_status(f, bfl, iter->li_pos, " ->");
+	}
 
 	return 0;
 }

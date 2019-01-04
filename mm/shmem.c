@@ -2801,7 +2801,7 @@ static int shmem_statfs(struct dentry *dentry, struct kstatfs *buf)
 {
 	struct shmem_sb_info *sbinfo = SHMEM_SB(dentry->d_sb);
 
-	buf->f_type = TMPFS_MAGIC;
+	buf->f_type = TMPFS_SUPER_MAGIC;
 	buf->f_bsize = PAGE_SIZE;
 	buf->f_namelen = NAME_MAX;
 	if (sbinfo->max_blocks) {
@@ -3652,7 +3652,7 @@ int shmem_fill_super(struct super_block *sb, void *data, int silent)
 	sb->s_maxbytes = MAX_LFS_FILESIZE;
 	sb->s_blocksize = PAGE_SIZE;
 	sb->s_blocksize_bits = PAGE_SHIFT;
-	sb->s_magic = TMPFS_MAGIC;
+	sb->s_magic = TMPFS_SUPER_MAGIC;
 	sb->s_op = &shmem_ops;
 	sb->s_time_gran = 1;
 #ifdef CONFIG_TMPFS_XATTR

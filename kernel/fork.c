@@ -77,6 +77,9 @@
 #include <linux/compiler.h>
 #include <linux/sysctl.h>
 #include <linux/kcov.h>
+#include <linux/vs_context.h>
+#include <linux/vs_network.h>
+#include <linux/vs_limit.h>
 
 #include <asm/pgtable.h>
 #include <asm/pgalloc.h>
@@ -414,6 +417,8 @@ void free_task(struct task_struct *tsk)
 	WARN_ON_ONCE(atomic_read(&tsk->stack_refcount) != 0);
 #endif
 	rt_mutex_debug_task_free(tsk);
+	clr_vx_info(&tsk->vx_info);
+	clr_nx_info(&tsk->nx_info);
 	ftrace_graph_exit_task(tsk);
 	put_seccomp_filter(tsk);
 	arch_release_task_struct(tsk);
@@ -1606,6 +1611,8 @@ static __latent_entropy struct task_struct *copy_process(
 {
 	int retval;
 	struct task_struct *p;
+	struct vx_info *vxi;
+	struct nx_info *nxi;
 
 	if ((clone_flags & (CLONE_NEWNS|CLONE_FS)) == (CLONE_NEWNS|CLONE_FS))
 		return ERR_PTR(-EINVAL);
@@ -1678,7 +1685,13 @@ static __latent_entropy struct task_struct *copy_process(
 	DEBUG_LOCKS_WARN_ON(!p->hardirqs_enabled);
 	DEBUG_LOCKS_WARN_ON(!p->softirqs_enabled);
 #endif
+	init_vx_info(&p->vx_info, current_vx_info());
+	init_nx_info(&p->nx_info, current_nx_info());
+
 	retval = -EAGAIN;
+
+	if (!vx_nproc_avail(1))
+		goto bad_fork_free;
 
 	gr_learn_resource(p, RLIMIT_NPROC, atomic_read(&p->real_cred->user->processes), 0);
 
@@ -1983,6 +1996,18 @@ static __latent_entropy struct task_struct *copy_process(
 	total_forks++;
 	spin_unlock(&current->sighand->siglock);
 	syscall_tracepoint_update(p);
+
+	/* p is copy of current */
+	vxi = p->vx_info;
+	if (vxi) {
+		claim_vx_info(vxi, p);
+		atomic_inc(&vxi->cvirt.nr_threads);
+		atomic_inc(&vxi->cvirt.total_forks);
+		vx_nproc_inc(p);
+	}
+	nxi = p->nx_info;
+	if (nxi)
+		claim_nx_info(nxi, p);
 	write_unlock_irq(&tasklist_lock);
 
 	proc_fork_connector(p);

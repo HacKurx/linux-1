@@ -270,6 +270,10 @@ extern struct task_group root_task_group;
 	INIT_VTIME(tsk)							\
 	INIT_NUMA_BALANCING(tsk)					\
 	INIT_KASAN(tsk)							\
+	.xid		= 0,						\
+	.vx_info	= NULL,						\
+	.nid		= 0,						\
+	.nx_info	= NULL,						\
 }
 
 

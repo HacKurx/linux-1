@@ -52,6 +52,7 @@ struct mapped_device {
 
 	atomic_t holders;
 	atomic_t open_count;
+	vxid_t xid;
 
 	struct dm_target *immutable_target;
 	struct target_type *immutable_target_type;

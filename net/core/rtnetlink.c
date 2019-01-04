@@ -1618,6 +1618,8 @@ static int rtnl_dump_ifinfo(struct sk_buff *skb, struct netlink_callback *cb)
 				goto cont;
 			if (idx < s_idx)
 				goto cont;
+			if (!nx_dev_visible(skb->sk->sk_nx_info, dev))
+				continue;
 			err = rtnl_fill_ifinfo(skb, dev, RTM_NEWLINK,
 					       NETLINK_CB(cb->skb).portid,
 					       cb->nlh->nlmsg_seq, 0,
@@ -2822,6 +2824,9 @@ void rtmsg_ifinfo(int type, struct net_device *dev, unsigned int change,
 		  gfp_t flags)
 {
 	struct sk_buff *skb;
+
+	if (!nx_dev_visible(current_nx_info(), dev))
+		return;
 
 	if (dev->reg_state != NETREG_REGISTERED)
 		return;

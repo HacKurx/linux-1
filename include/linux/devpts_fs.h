@@ -34,5 +34,4 @@ void devpts_pty_kill(struct dentry *);
 
 #endif
 
-
 #endif /* _LINUX_DEVPTS_FS_H */

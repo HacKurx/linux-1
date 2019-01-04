@@ -84,6 +84,7 @@
 #include <linux/integrity.h>
 #include <linux/proc_ns.h>
 #include <linux/io.h>
+#include <linux/vserver/percpu.h>
 #include <linux/kaiser.h>
 #include <linux/cache.h>
 

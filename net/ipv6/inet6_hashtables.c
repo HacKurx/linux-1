@@ -16,6 +16,7 @@
 
 #include <linux/module.h>
 #include <linux/random.h>
+#include <linux/vs_inet6.h>
 
 #include <net/addrconf.h>
 #include <net/inet_connection_sock.h>
@@ -108,6 +109,9 @@ static inline int compute_score(struct sock *sk, struct net *net,
 			if (!ipv6_addr_equal(&sk->sk_v6_rcv_saddr, daddr))
 				return -1;
 			score++;
+		} else {
+			if (!v6_addr_in_nx_info(sk->sk_nx_info, daddr, -1))
+				return -1;
 		}
 		if (sk->sk_bound_dev_if || exact_dif) {
 			if (sk->sk_bound_dev_if != dif)
@@ -282,39 +286,74 @@ EXPORT_SYMBOL_GPL(inet6_hash);
  *                          IPV6_ADDR_ANY only equals to IPV6_ADDR_ANY,
  *                          and 0.0.0.0 equals to 0.0.0.0 only
  */
-int ipv6_rcv_saddr_equal(const struct sock *sk, const struct sock *sk2,
+int ipv6_rcv_saddr_equal(const struct sock *sk1, const struct sock *sk2,
 			 bool match_wildcard)
 {
+	const struct in6_addr *sk1_rcv_saddr6 = inet6_rcv_saddr(sk1);
 	const struct in6_addr *sk2_rcv_saddr6 = inet6_rcv_saddr(sk2);
+	__be32 sk1_rcv_saddr = sk1->sk_rcv_saddr;
+	__be32 sk2_rcv_saddr = sk2->sk_rcv_saddr;
+	int sk1_ipv6only = inet_v6_ipv6only(sk1);
 	int sk2_ipv6only = inet_v6_ipv6only(sk2);
-	int addr_type = ipv6_addr_type(&sk->sk_v6_rcv_saddr);
+	int addr_type1 = ipv6_addr_type(sk1_rcv_saddr6);
 	int addr_type2 = sk2_rcv_saddr6 ? ipv6_addr_type(sk2_rcv_saddr6) : IPV6_ADDR_MAPPED;
 
+	/* if one is mapped and the other is ipv6only exit early */
+	if (addr_type1 == IPV6_ADDR_MAPPED && sk2_ipv6only)
+		return 0;
+
+	if (addr_type2 == IPV6_ADDR_MAPPED && sk1_ipv6only)
+		return 0;
+
 	/* if both are mapped, treat as IPv4 */
-	if (addr_type == IPV6_ADDR_MAPPED && addr_type2 == IPV6_ADDR_MAPPED) {
-		if (!sk2_ipv6only) {
-			if (sk->sk_rcv_saddr == sk2->sk_rcv_saddr)
-				return 1;
-			if (!sk->sk_rcv_saddr || !sk2->sk_rcv_saddr)
-				return match_wildcard;
-		}
+	if (addr_type1 == IPV6_ADDR_MAPPED && addr_type2 == IPV6_ADDR_MAPPED) {
+		if (sk1_rcv_saddr == sk2_rcv_saddr)
+			return 1;
+		if ((!sk1_rcv_saddr || !sk2_rcv_saddr) && match_wildcard)
+			goto vs_v4;
 		return 0;
 	}
 
-	if (addr_type == IPV6_ADDR_ANY && addr_type2 == IPV6_ADDR_ANY)
+	/* if both are wildcards, check for overlap */
+	if (addr_type1 == IPV6_ADDR_ANY && addr_type2 == IPV6_ADDR_ANY)
+		return nx_v6_addr_conflict(sk1->sk_nx_info, sk2->sk_nx_info);
+
+	/* if both are valid ipv6 addresses, mapped handled above */
+	if (addr_type1 != IPV6_ADDR_ANY && addr_type2 != IPV6_ADDR_ANY &&
+	    sk2_rcv_saddr6 && ipv6_addr_equal(sk1_rcv_saddr6, sk2_rcv_saddr6))
 		return 1;
 
-	if (addr_type2 == IPV6_ADDR_ANY && match_wildcard &&
-	    !(sk2_ipv6only && addr_type == IPV6_ADDR_MAPPED))
-		return 1;
+	if (addr_type1 == IPV6_ADDR_ANY && match_wildcard) {
+		/* ipv6only case handled above */
+		if (addr_type2 == IPV6_ADDR_MAPPED)
+			return v4_addr_in_nx_info(sk1->sk_nx_info,
+						  sk2_rcv_saddr,
+						  -1);
+		else
+			return v6_addr_in_nx_info(sk1->sk_nx_info,
+						  sk2_rcv_saddr6,
+						  -1);
+	}
 
-	if (addr_type == IPV6_ADDR_ANY && match_wildcard &&
-	    !(ipv6_only_sock(sk) && addr_type2 == IPV6_ADDR_MAPPED))
-		return 1;
+	if (addr_type2 == IPV6_ADDR_ANY && match_wildcard) {
+		/* ipv6only case handled above */
+		if (addr_type1 == IPV6_ADDR_MAPPED)
+			return v4_addr_in_nx_info(sk2->sk_nx_info, sk1_rcv_saddr, -1);
+		else
+			return v6_addr_in_nx_info(sk2->sk_nx_info, sk1_rcv_saddr6, -1);
+	}
 
-	if (sk2_rcv_saddr6 &&
-	    ipv6_addr_equal(&sk->sk_v6_rcv_saddr, sk2_rcv_saddr6))
-		return 1;
+	return 0;
+
+vs_v4:
+	if (!sk1_rcv_saddr && !sk2_rcv_saddr)
+		return nx_v4_addr_conflict(sk1->sk_nx_info, sk2->sk_nx_info);
+
+	if (!sk2_rcv_saddr)
+		return v4_addr_in_nx_info(sk1->sk_nx_info, sk2_rcv_saddr, -1);
+
+	if (!sk1_rcv_saddr)
+		return v4_addr_in_nx_info(sk2->sk_nx_info, sk1_rcv_saddr, -1);
 
 	return 0;
 }

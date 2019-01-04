@@ -38,6 +38,7 @@
 #include <linux/fs.h>
 #include <linux/math64.h>
 #include <linux/ptrace.h>
+#include <linux/vs_time.h>
 
 #include <asm/uaccess.h>
 #include <asm/unistd.h>
@@ -94,7 +95,7 @@ SYSCALL_DEFINE1(stime, time_t __user *, tptr)
 	if (err)
 		return err;
 
-	do_settimeofday(&tv);
+	vx_settimeofday(&tv);
 	return 0;
 }
 
@@ -192,7 +193,7 @@ int do_sys_settimeofday64(const struct timespec64 *tv, const struct timezone *tz
 		}
 	}
 	if (tv)
-		return do_settimeofday64(tv);
+		return vx_settimeofday64(tv);
 	return 0;
 }
 

@@ -23,6 +23,7 @@
 #include <linux/spinlock.h>
 #include <linux/completion.h>
 #include <linux/grsecurity.h>
+#include <linux/vserver/inode.h>
 #include <asm/uaccess.h>
 
 #include "internal.h"
@@ -67,8 +68,16 @@ static struct proc_dir_entry *pde_subdir_find(struct proc_dir_entry *dir,
 			node = node->rb_left;
 		else if (result > 0)
 			node = node->rb_right;
-		else
+		else {
+			if (!vx_hide_check(0, de->vx_flags)) {
+				vxdprintk(VXD_CBIT(misc, 9),
+					VS_Q("%*s")
+					" hidden in pde_subdir_find()",
+					de->namelen, de->name);
+				return 0;
+			}
 			return de;
+		}
 	}
 	return NULL;
 }
@@ -242,6 +251,8 @@ struct dentry *proc_lookup_de(struct proc_dir_entry *de, struct inode *dir,
 			return ERR_PTR(-ENOMEM);
 		d_set_d_op(dentry, &simple_dentry_operations);
 		d_add(dentry, inode);
+		/* generic proc entries belong to the host */
+		i_tag_write(inode, 0);
 		return NULL;
 	}
 	read_unlock(&proc_subdir_lock);
@@ -297,6 +308,12 @@ int proc_readdir_de(struct proc_dir_entry *de, struct file *file,
 	do {
 		struct proc_dir_entry *next;
 		pde_get(de);
+		if (!vx_hide_check(0, de->vx_flags)) {
+			vxdprintk(VXD_CBIT(misc, 9),
+				VS_Q("%*s") " hidden in proc_readdir_de()",
+				de->namelen, de->name);
+			goto skip;
+		}
 		read_unlock(&proc_subdir_lock);
 		if (!dir_emit(ctx, de->name, de->namelen,
 			    de->low_ino, de->mode >> 12)) {
@@ -304,6 +321,7 @@ int proc_readdir_de(struct proc_dir_entry *de, struct file *file,
 			return 0;
 		}
 		read_lock(&proc_subdir_lock);
+	skip:
 		ctx->pos++;
 		next = pde_subdir_next(de);
 		pde_put(de);
@@ -419,6 +437,7 @@ static struct proc_dir_entry *__proc_create(struct proc_dir_entry **parent,
 	ent->mode = mode;
 	ent->nlink = nlink;
 	ent->subdir = RB_ROOT;
+	ent->vx_flags = IATTR_PROC_DEFAULT;
 	atomic_set(&ent->count, 1);
 	spin_lock_init(&ent->pde_unload_lock);
 	INIT_LIST_HEAD(&ent->pde_openers);
@@ -445,6 +464,8 @@ struct proc_dir_entry *proc_symlink(const char *name,
 				kfree(ent->data);
 				kfree(ent);
 				ent = NULL;
+			} else {
+				ent->vx_flags = IATTR_PROC_SYMLINK;
 			}
 		} else {
 			kfree(ent);

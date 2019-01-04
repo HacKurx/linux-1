@@ -9,8 +9,10 @@
 #include <linux/slab.h>
 #include <linux/time.h>
 #include <linux/irqnr.h>
+#include <linux/vserver/cvirt.h>
 #include <linux/cputime.h>
 #include <linux/tick.h>
+#include <linux/cpuset.h>
 #include <linux/grsecurity.h>
 
 #ifndef arch_irq_stat_cpu
@@ -100,12 +102,24 @@ static int show_stat(struct seq_file *p, void *v)
 #endif
 #endif
 
+	cpumask_var_t cpus_allowed;
+	bool virt_cpu = vx_flags(VXF_VIRT_CPU, 0);
+
 	user = nice = system = idle = iowait =
 		irq = softirq = steal = 0;
 	guest = guest_nice = 0;
 	getboottime64(&boottime);
 
+	if (vx_flags(VXF_VIRT_UPTIME, 0))
+		vx_vsi_boottime64(&boottime);
+
+	if (virt_cpu)
+		cpuset_cpus_allowed(current, cpus_allowed);
+
 	for_each_possible_cpu(i) {
+		if (virt_cpu && !cpumask_test_cpu(i, cpus_allowed))
+			continue;
+
 		user += kcpustat_cpu(i).cpustat[CPUTIME_USER];
 		nice += kcpustat_cpu(i).cpustat[CPUTIME_NICE];
 		system += kcpustat_cpu(i).cpustat[CPUTIME_SYSTEM];
@@ -143,6 +157,9 @@ static int show_stat(struct seq_file *p, void *v)
 	seq_putc(p, '\n');
 
 	for_each_online_cpu(i) {
+		if (virt_cpu && !cpumask_test_cpu(i, cpus_allowed))
+			continue;
+
 		/* Copy values here to work around gcc-2.95.3, gcc-2.96 */
 		user = kcpustat_cpu(i).cpustat[CPUTIME_USER];
 		nice = kcpustat_cpu(i).cpustat[CPUTIME_NICE];

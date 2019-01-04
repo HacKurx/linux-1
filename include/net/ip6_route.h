@@ -26,6 +26,7 @@ struct route_info {
 #include <linux/ip.h>
 #include <linux/ipv6.h>
 #include <linux/route.h>
+#include <linux/vs_inet6.h>
 
 #define RT6_LOOKUP_F_IFACE		0x00000001
 #define RT6_LOOKUP_F_REACHABLE		0x00000002
@@ -98,17 +99,20 @@ int ip6_del_rt(struct rt6_info *);
 static inline int ip6_route_get_saddr(struct net *net, struct rt6_info *rt,
 				      const struct in6_addr *daddr,
 				      unsigned int prefs,
-				      struct in6_addr *saddr)
+				      struct in6_addr *saddr,
+				      struct nx_info *nxi)
 {
 	struct inet6_dev *idev =
 			rt ? ip6_dst_idev((struct dst_entry *)rt) : NULL;
 	int err = 0;
 
-	if (rt && rt->rt6i_prefsrc.plen)
+	if (rt && rt->rt6i_prefsrc.plen
+	    && (!nxi ||
+		v6_addr_in_nx_info(nxi, &rt->rt6i_prefsrc.addr, NXA_TYPE_ADDR)))
 		*saddr = rt->rt6i_prefsrc.addr;
 	else
 		err = ipv6_dev_get_saddr(net, idev ? idev->dev : NULL,
-					 daddr, prefs, saddr);
+					 daddr, prefs, saddr, nxi);
 
 	return err;
 }
