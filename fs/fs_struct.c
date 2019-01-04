@@ -181,5 +181,5 @@ struct fs_struct init_fs = {
 	.users		= ATOMIC_INIT(1),
 	.lock		= __SPIN_LOCK_UNLOCKED(init_fs.lock),
 	.seq		= SEQCNT_ZERO(init_fs.seq),
-	.umask		= 0022,
+	.umask		= 0077,
 };
