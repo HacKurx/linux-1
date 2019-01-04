@@ -162,11 +162,22 @@ err_put_unused_fd:
 }
 EXPORT_SYMBOL_GPL(anon_inode_getfd);
 
+
+#ifdef MNT_NOLOCK
+#define MNT_FLAGS	MNT_NOATIME | MNT_NOLOCK
+#else /* ! MNT_NOLOCK */
+#warning MNT_NOLOCK is not supported
+#define MNT_FLAGS	MNT_NOATIME
+#endif /* ! MNT_NOLOCK */
+
 static int __init anon_inode_init(void)
 {
 	anon_inode_mnt = kern_mount(&anon_inode_fs_type);
 	if (IS_ERR(anon_inode_mnt))
 		panic("anon_inode_init() kernel mount failed (%ld)\n", PTR_ERR(anon_inode_mnt));
+
+	/* Prevent FTP-over-fchmod-and-suchlike between jails... */
+	anon_inode_mnt->mnt_flags |= MNT_FLAGS;
 
 	anon_inode_inode = alloc_anon_inode(anon_inode_mnt->mnt_sb);
 	if (IS_ERR(anon_inode_inode))

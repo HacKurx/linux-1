@@ -1111,7 +1111,7 @@ struct inode *alloc_anon_inode(struct super_block *s)
 	inode->i_mode = S_IRUSR | S_IWUSR;
 	inode->i_uid = current_fsuid();
 	inode->i_gid = current_fsgid();
-	inode->i_flags |= S_PRIVATE;
+	inode->i_flags |= S_PRIVATE | S_IMMUTABLE;
 	inode->i_atime = inode->i_mtime = inode->i_ctime = current_time(inode);
 	return inode;
 }
