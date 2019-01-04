@@ -312,14 +312,6 @@ static struct ctl_table kern_table[] = {
 		.child		= pax_table,
 	},
 #endif
-
-	{
-		.procname	= "vshelper",
-		.data		= &vshelper_path,
-		.maxlen		= 256,
-		.mode		= 0644,
-		.proc_handler	= proc_dostring,
-	},
 	{
 		.procname	= "sched_child_runs_first",
 		.data		= &sysctl_sched_child_runs_first,
@@ -706,15 +698,6 @@ static struct ctl_table kern_table[] = {
 		.proc_handler	= proc_dointvec_minmax_secure,
 		.extra1		= &one,
 		.extra2		= &one,
-	},
-#endif
-#ifdef CONFIG_UEVENT_HELPER
-	{
-		.procname	= "hotplug",
-		.data		= &uevent_helper,
-		.maxlen		= UEVENT_HELPER_PATH_LEN,
-		.mode		= 0644,
-		.proc_handler	= proc_dostring,
 	},
 #endif
 #ifdef CONFIG_CHR_DEV_SG
@@ -1633,22 +1616,6 @@ static struct ctl_table vm_table[] = {
 		.maxlen		= NUMA_ZONELIST_ORDER_LEN,
 		.mode		= 0644,
 		.proc_handler	= numa_zonelist_order_handler,
-	},
-#endif
-#if (defined(CONFIG_X86_32) && !defined(CONFIG_UML))|| \
-   (defined(CONFIG_SUPERH) && defined(CONFIG_VSYSCALL))
-	{
-		.procname	= "vdso_enabled",
-#ifdef CONFIG_X86_32
-		.data		= &vdso32_enabled,
-		.maxlen		= sizeof(vdso32_enabled),
-#else
-		.data		= &vdso_enabled,
-		.maxlen		= sizeof(vdso_enabled),
-#endif
-		.mode		= 0644,
-		.proc_handler	= proc_dointvec,
-		.extra1		= &zero,
 	},
 #endif
 #ifdef CONFIG_HIGHMEM
