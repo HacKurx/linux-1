@@ -415,27 +415,37 @@ static inline void task_pax(struct seq_file *m, struct task_struct *p)
 int proc_pid_nsproxy(struct seq_file *m, struct pid_namespace *ns,
 			struct pid *pid, struct task_struct *task)
 {
-	seq_printf(m,	"Proxy:\t%p(%c)\n"
+	struct nsproxy *nsproxy;
+
+	rcu_read_lock();
+	nsproxy = task_nsproxy(task);
+	if (nsproxy == NULL)
+		goto out;
+
+	seq_printf(m,   "Proxy:\t%pK(%c)\n"
 			"Count:\t%u\n"
-			"uts:\t%p(%c)\n"
-			"ipc:\t%p(%c)\n"
-			"mnt:\t%p(%c)\n"
-			"pid:\t%p(%c)\n"
-			"net:\t%p(%c)\n",
-			task->nsproxy,
-			(task->nsproxy == init_task.nsproxy ? 'I' : '-'),
-			atomic_read(&task->nsproxy->count),
-			task->nsproxy->uts_ns,
-			(task->nsproxy->uts_ns == init_task.nsproxy->uts_ns ? 'I' : '-'),
-			task->nsproxy->ipc_ns,
-			(task->nsproxy->ipc_ns == init_task.nsproxy->ipc_ns ? 'I' : '-'),
-			task->nsproxy->mnt_ns,
-			(task->nsproxy->mnt_ns == init_task.nsproxy->mnt_ns ? 'I' : '-'),
-			task->nsproxy->pid_ns_for_children,
-			(task->nsproxy->pid_ns_for_children ==
+			"uts:\t%pK(%c)\n"
+			"ipc:\t%pK(%c)\n"
+			"mnt:\t%pK(%c)\n"
+			"pid:\t%pK(%c)\n"
+			"net:\t%pK(%c)\n",
+			nsproxy,
+			(nsproxy == init_task.nsproxy ? 'I' : '-'),
+			atomic_read(&nsproxy->count),
+			nsproxy->uts_ns,
+			(nsproxy->uts_ns == init_task.nsproxy->uts_ns ? 'I' : '-'),
+			nsproxy->ipc_ns,
+			(nsproxy->ipc_ns == init_task.nsproxy->ipc_ns ? 'I' : '-'),
+			nsproxy->mnt_ns,
+			(nsproxy->mnt_ns == init_task.nsproxy->mnt_ns ? 'I' : '-'),
+			nsproxy->pid_ns_for_children,
+			(nsproxy->pid_ns_for_children ==
 				init_task.nsproxy->pid_ns_for_children ? 'I' : '-'),
-			task->nsproxy->net_ns,
-			(task->nsproxy->net_ns == init_task.nsproxy->net_ns ? 'I' : '-'));
+			nsproxy->net_ns,
+			(nsproxy->net_ns == init_task.nsproxy->net_ns ? 'I' : '-'));
+
+out:
+	rcu_read_unlock();
 	return 0;
 }
 

@@ -5472,7 +5472,7 @@ int vx_info_mnt_namespace(struct mnt_namespace *ns, char *buffer)
 	path.dentry = vmnt->mnt_root;
 	root = d_path(&path, pstr, PATH_MAX - 2);
 	length = sprintf(buffer + length,
-			 "Namespace:\t%p [#%u]\n"
+			 "Namespace:\t%pK [#%u]\n"
 			 "RootPath:\t%s\n",
 			 ns, atomic_read(&ns->count),
 			 root);

@@ -21,7 +21,7 @@ int vx_info_proc_nsproxy(struct nsproxy *nsproxy, char *buffer)
 		goto out;
 
 	length += sprintf(buffer + length,
-		"NSProxy:\t%p [%p,%p,%p]\n",
+		"NSProxy:\t%pK [%pK,%pK,%pK]\n",
 		nsproxy, nsproxy->mnt_ns,
 		nsproxy->uts_ns, nsproxy->ipc_ns);
 
