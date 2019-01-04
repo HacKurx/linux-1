@@ -64,6 +64,10 @@ static long snd_hwdep_ioctl_compat(struct file * file, unsigned int cmd,
 {
 	struct snd_hwdep *hw = file->private_data;
 	void __user *argp = compat_ptr(arg);
+
+	if (!snd_allowed_ctx())
+		return -EBADFD;
+
 	switch (cmd) {
 	case SNDRV_HWDEP_IOCTL_PVERSION:
 	case SNDRV_HWDEP_IOCTL_INFO:

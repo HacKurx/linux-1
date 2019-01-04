@@ -1937,6 +1937,11 @@ static int wait_for_avail(struct snd_pcm_substream *substream,
 			break;
 		}
 
+		if (!snd_allowed_ctx()) {
+			err = -EBADFD;
+			break;
+		}
+
 		/*
 		 * We need to check if space became available already
 		 * (and thus the wakeup happened already) first to close
@@ -2031,6 +2036,12 @@ static snd_pcm_sframes_t snd_pcm_lib_write1(struct snd_pcm_substream *substream,
 		return 0;
 
 	snd_pcm_stream_lock_irq(substream);
+
+	if (!snd_allowed_ctx()) {
+		err = -EBADFD;
+		goto _end_unlock;
+	}
+
 	switch (runtime->status->state) {
 	case SNDRV_PCM_STATE_PREPARED:
 	case SNDRV_PCM_STATE_RUNNING:
@@ -2249,6 +2260,12 @@ static snd_pcm_sframes_t snd_pcm_lib_read1(struct snd_pcm_substream *substream,
 		return 0;
 
 	snd_pcm_stream_lock_irq(substream);
+
+	if (!snd_allowed_ctx()) {
+		err = -EBADFD;
+		goto _end_unlock;
+	}
+
 	switch (runtime->status->state) {
 	case SNDRV_PCM_STATE_PREPARED:
 		if (size >= runtime->start_threshold) {

@@ -457,4 +457,7 @@ snd_pci_quirk_lookup_id(u16 vendor, u16 device,
 }
 #endif
 
+extern vxid_t clip_sound_xid;
+extern int snd_allowed_ctx(void);
+
 #endif /* __SOUND_CORE_H */

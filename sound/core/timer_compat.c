@@ -138,6 +138,9 @@ static long __snd_timer_user_ioctl_compat(struct file *file, unsigned int cmd,
 {
 	void __user *argp = compat_ptr(arg);
 
+	if (!snd_allowed_ctx())
+		return -EBADFD;
+
 	switch (cmd) {
 	case SNDRV_TIMER_IOCTL_PVERSION:
 	case SNDRV_TIMER_IOCTL_TREAD:

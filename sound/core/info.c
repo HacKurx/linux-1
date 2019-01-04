@@ -123,6 +123,9 @@ static loff_t snd_info_entry_llseek(struct file *file, loff_t offset, int orig)
 	struct snd_info_entry *entry;
 	loff_t ret = -EINVAL, size;
 
+	if (!snd_allowed_ctx())
+		return -EBADFD;
+
 	data = file->private_data;
 	entry = data->entry;
 	mutex_lock(&entry->access);
@@ -167,6 +170,9 @@ static ssize_t snd_info_entry_read(struct file *file, char __user *buffer,
 	size_t size;
 	loff_t pos;
 
+	if (!snd_allowed_ctx())
+		return -EBADFD;
+
 	pos = *offset;
 	if (!valid_pos(pos, count))
 		return -EIO;
@@ -189,6 +195,9 @@ static ssize_t snd_info_entry_write(struct file *file, const char __user *buffer
 	ssize_t size = 0;
 	loff_t pos;
 
+	if (!snd_allowed_ctx())
+		return -EBADFD;
+
 	pos = *offset;
 	if (!valid_pos(pos, count))
 		return -EIO;
@@ -209,6 +218,9 @@ static unsigned int snd_info_entry_poll(struct file *file, poll_table *wait)
 	struct snd_info_entry *entry = data->entry;
 	unsigned int mask = 0;
 
+	if (!snd_allowed_ctx())
+		return 0;
+
 	if (entry->c.ops->poll)
 		return entry->c.ops->poll(entry,
 					  data->file_private_data,
@@ -226,6 +238,9 @@ static long snd_info_entry_ioctl(struct file *file, unsigned int cmd,
 	struct snd_info_private_data *data = file->private_data;
 	struct snd_info_entry *entry = data->entry;
 
+	if (!snd_allowed_ctx())
+		return -EBADFD;
+
 	if (!entry->c.ops->ioctl)
 		return -ENOTTY;
 	return entry->c.ops->ioctl(entry, data->file_private_data,
@@ -237,6 +252,9 @@ static int snd_info_entry_mmap(struct file *file, struct vm_area_struct *vma)
 	struct inode *inode = file_inode(file);
 	struct snd_info_private_data *data;
 	struct snd_info_entry *entry;
+
+	if (!snd_allowed_ctx())
+		return -EBADFD;
 
 	data = file->private_data;
 	if (data == NULL)
@@ -253,6 +271,9 @@ static int snd_info_entry_open(struct inode *inode, struct file *file)
 	struct snd_info_entry *entry = PDE_DATA(inode);
 	struct snd_info_private_data *data;
 	int mode, err;
+
+	if (!snd_allowed_ctx())
+		return -ENODEV;
 
 	mutex_lock(&info_mutex);
 	err = alloc_info_private(entry, &data);

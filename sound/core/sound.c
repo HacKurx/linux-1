@@ -31,6 +31,8 @@
 #include <sound/initval.h>
 #include <linux/kmod.h>
 #include <linux/mutex.h>
+#include <linux/sysctl.h>
+#include <linux/vserver/base.h>
 
 static int major = CONFIG_SND_MAJOR;
 int snd_major;
@@ -155,6 +157,9 @@ static int snd_open(struct inode *inode, struct file *file)
 	struct snd_minor *mptr = NULL;
 	const struct file_operations *new_fops;
 	int err = 0;
+
+	if (!snd_allowed_ctx())
+		return -ENODEV;
 
 	if (minor >= ARRAY_SIZE(snd_minors))
 		return -ENODEV;
@@ -394,6 +399,71 @@ int __init snd_minor_info_init(void)
 #endif /* CONFIG_SND_PROC_FS */
 
 /*
+ *  SYSCTL PART (CLIP)
+ */
+vxid_t clip_sound_xid = 0;
+
+static struct ctl_table_header *snd_xid_table_header = NULL;
+
+static struct ctl_table snd_xid_inner_table[] = {
+	{
+		.procname	= "sound_xid",
+		.data		= &clip_sound_xid,
+		.maxlen		= sizeof(clip_sound_xid),
+		.mode		= 0600,
+		.proc_handler	= &proc_dointvec,
+	},
+
+	{ }
+};
+
+static struct ctl_table clip_dir_table[] = {
+	{
+		.procname 	= "clip",
+		.mode 		= 0700,
+		.child		= snd_xid_inner_table,
+	},
+	{ }
+};
+
+static struct ctl_table kernel_root_table[] = {
+	{
+		.procname	= "kernel",
+		.mode		= 0555,
+		.child		= clip_dir_table,
+	},
+	{ }
+};
+
+static int __init alsa_sysctl_init(void)
+{
+	snd_xid_table_header = register_sysctl_table(kernel_root_table);
+	if (!snd_xid_table_header) {
+		snd_printk(KERN_ERR "unable to register sysctl\n");
+		return -EFAULT;
+	}
+	return 0;
+}
+
+static void __exit alsa_sysctl_exit(void)
+{
+	if (snd_xid_table_header)
+		unregister_sysctl_table(snd_xid_table_header);
+}
+
+int snd_allowed_ctx(void)
+{
+	vxid_t cur = vx_current_xid();
+
+	if (!cur) /* Always allowed in ADMIN context */
+		return 1;
+	if (cur == clip_sound_xid)
+		return 1;
+	return 0;
+}
+EXPORT_SYMBOL(snd_allowed_ctx);
+
+/*
  *  INIT PART
  */
 
@@ -409,6 +479,12 @@ static int __init alsa_sound_init(void)
 		unregister_chrdev(major, "alsa");
 		return -ENOMEM;
 	}
+	if (alsa_sysctl_init() < 0) {
+	        // Tear down snd_info_init() setup. See alsa_sound_exit().
+		snd_info_done();
+		unregister_chrdev(major, "alsa");
+		return -EFAULT;
+	}
 #ifndef MODULE
 	pr_info("Advanced Linux Sound Architecture Driver Initialized.\n");
 #endif
@@ -419,6 +495,7 @@ static void __exit alsa_sound_exit(void)
 {
 	snd_info_done();
 	unregister_chrdev(major, "alsa");
+	alsa_sysctl_exit();
 }
 
 subsys_initcall(alsa_sound_init);

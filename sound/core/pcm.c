@@ -94,6 +94,10 @@ static int snd_pcm_control_ioctl(struct snd_card *card,
 				 struct snd_ctl_file *control,
 				 unsigned int cmd, unsigned long arg)
 {
+
+	if (!snd_allowed_ctx())
+		return -EBADFD;
+
 	switch (cmd) {
 	case SNDRV_CTL_IOCTL_PCM_NEXT_DEVICE:
 		{

@@ -158,6 +158,9 @@ static long snd_rawmidi_ioctl_compat(struct file *file, unsigned int cmd, unsign
 	struct snd_rawmidi_file *rfile;
 	void __user *argp = compat_ptr(arg);
 
+	if (!snd_allowed_ctx())
+		return -EBADFD;
+
 	rfile = file->private_data;
 	switch (cmd) {
 	case SNDRV_RAWMIDI_IOCTL_PVERSION:

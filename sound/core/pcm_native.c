@@ -2326,7 +2326,12 @@ static int snd_pcm_open_file(struct file *file,
 static int snd_pcm_playback_open(struct inode *inode, struct file *file)
 {
 	struct snd_pcm *pcm;
-	int err = nonseekable_open(inode, file);
+	int err;
+
+	if (!snd_allowed_ctx())
+		return -ENODEV;
+
+	err = nonseekable_open(inode, file);
 	if (err < 0)
 		return err;
 	pcm = snd_lookup_minor_data(iminor(inode),
@@ -2340,7 +2345,12 @@ static int snd_pcm_playback_open(struct inode *inode, struct file *file)
 static int snd_pcm_capture_open(struct inode *inode, struct file *file)
 {
 	struct snd_pcm *pcm;
-	int err = nonseekable_open(inode, file);
+	int err;
+
+	if (!snd_allowed_ctx())
+		return -ENODEV;
+
+	err = nonseekable_open(inode, file);
 	if (err < 0)
 		return err;
 	pcm = snd_lookup_minor_data(iminor(inode),
@@ -2986,6 +2996,9 @@ static long snd_pcm_playback_ioctl(struct file *file, unsigned int cmd,
 {
 	struct snd_pcm_file *pcm_file;
 
+	if (!snd_allowed_ctx())
+		return -EBADFD;
+
 	pcm_file = file->private_data;
 
 	if (((cmd >> 8) & 0xff) != 'A')
@@ -2999,6 +3012,9 @@ static long snd_pcm_capture_ioctl(struct file *file, unsigned int cmd,
 				  unsigned long arg)
 {
 	struct snd_pcm_file *pcm_file;
+
+	if (!snd_allowed_ctx())
+		return -EBADFD;
 
 	pcm_file = file->private_data;
 
@@ -3043,6 +3059,9 @@ static ssize_t snd_pcm_read(struct file *file, char __user *buf, size_t count,
 	struct snd_pcm_runtime *runtime;
 	snd_pcm_sframes_t result;
 
+	if (!snd_allowed_ctx())
+		return -EBADFD;
+
 	pcm_file = file->private_data;
 	substream = pcm_file->substream;
 	if (PCM_RUNTIME_CHECK(substream))
@@ -3066,6 +3085,9 @@ static ssize_t snd_pcm_write(struct file *file, const char __user *buf,
 	struct snd_pcm_substream *substream;
 	struct snd_pcm_runtime *runtime;
 	snd_pcm_sframes_t result;
+
+	if (!snd_allowed_ctx())
+		return -EBADFD;
 
 	pcm_file = file->private_data;
 	substream = pcm_file->substream;
@@ -3092,6 +3114,9 @@ static ssize_t snd_pcm_readv(struct kiocb *iocb, struct iov_iter *to)
 	unsigned long i;
 	void __user **bufs;
 	snd_pcm_uframes_t frames;
+
+	if (!snd_allowed_ctx())
+		return -EBADFD;
 
 	pcm_file = iocb->ki_filp->private_data;
 	substream = pcm_file->substream;
@@ -3129,6 +3154,9 @@ static ssize_t snd_pcm_writev(struct kiocb *iocb, struct iov_iter *from)
 	void __user **bufs;
 	snd_pcm_uframes_t frames;
 
+	if (!snd_allowed_ctx())
+		return -EBADFD;
+
 	pcm_file = iocb->ki_filp->private_data;
 	substream = pcm_file->substream;
 	if (PCM_RUNTIME_CHECK(substream))
@@ -3161,6 +3189,9 @@ static unsigned int snd_pcm_playback_poll(struct file *file, poll_table * wait)
 	struct snd_pcm_runtime *runtime;
         unsigned int mask;
 	snd_pcm_uframes_t avail;
+
+	if (!snd_allowed_ctx())
+		return 0;
 
 	pcm_file = file->private_data;
 
@@ -3200,6 +3231,9 @@ static unsigned int snd_pcm_capture_poll(struct file *file, poll_table * wait)
 	struct snd_pcm_runtime *runtime;
         unsigned int mask;
 	snd_pcm_uframes_t avail;
+
+	if (!snd_allowed_ctx())
+		return 0;
 
 	pcm_file = file->private_data;
 
@@ -3500,6 +3534,9 @@ static int snd_pcm_mmap(struct file *file, struct vm_area_struct *area)
 	struct snd_pcm_substream *substream;	
 	unsigned long offset;
 	
+	if (!snd_allowed_ctx())
+		return -EBADFD;
+
 	pcm_file = file->private_data;
 	substream = pcm_file->substream;
 	if (PCM_RUNTIME_CHECK(substream))
@@ -3526,6 +3563,9 @@ static int snd_pcm_fasync(int fd, struct file * file, int on)
 	struct snd_pcm_file * pcm_file;
 	struct snd_pcm_substream *substream;
 	struct snd_pcm_runtime *runtime;
+
+	if (!snd_allowed_ctx())
+		return -EBADFD;
 
 	pcm_file = file->private_data;
 	substream = pcm_file->substream;

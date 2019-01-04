@@ -1331,6 +1331,9 @@ static int snd_timer_user_open(struct inode *inode, struct file *file)
 	struct snd_timer_user *tu;
 	int err;
 
+	if (!snd_allowed_ctx())
+		return -ENODEV;
+
 	err = nonseekable_open(inode, file);
 	if (err < 0)
 		return err;
@@ -1887,6 +1890,9 @@ static long __snd_timer_user_ioctl(struct file *file, unsigned int cmd,
 	void __user *argp = (void __user *)arg;
 	int __user *p = argp;
 
+	if (!snd_allowed_ctx())
+		return -EBADFD;
+
 	tu = file->private_data;
 	switch (cmd) {
 	case SNDRV_TIMER_IOCTL_PVERSION:
@@ -1950,6 +1956,9 @@ static int snd_timer_user_fasync(int fd, struct file * file, int on)
 {
 	struct snd_timer_user *tu;
 
+	if (!snd_allowed_ctx())
+		return -EBADFD;
+
 	tu = file->private_data;
 	return fasync_helper(fd, file, on, &tu->fasync);
 }
@@ -1961,6 +1970,9 @@ static ssize_t snd_timer_user_read(struct file *file, char __user *buffer,
 	long result = 0, unit;
 	int qhead;
 	int err = 0;
+
+	if (!snd_allowed_ctx())
+		return -EBADFD;
 
 	tu = file->private_data;
 	unit = tu->tread ? sizeof(struct snd_timer_tread) : sizeof(struct snd_timer_read);
@@ -2028,6 +2040,9 @@ static unsigned int snd_timer_user_poll(struct file *file, poll_table * wait)
 {
         unsigned int mask;
         struct snd_timer_user *tu;
+
+	if (!snd_allowed_ctx())
+		return 0;
 
         tu = file->private_data;
 

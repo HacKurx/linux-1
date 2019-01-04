@@ -56,6 +56,10 @@ static struct snd_hwdep *snd_hwdep_search(struct snd_card *card, int device)
 static loff_t snd_hwdep_llseek(struct file * file, loff_t offset, int orig)
 {
 	struct snd_hwdep *hw = file->private_data;
+
+	if (!snd_allowed_ctx())
+		return -EBADFD;
+
 	if (hw->ops.llseek)
 		return hw->ops.llseek(hw, file, offset, orig);
 	return -ENXIO;
@@ -65,6 +69,10 @@ static ssize_t snd_hwdep_read(struct file * file, char __user *buf,
 			      size_t count, loff_t *offset)
 {
 	struct snd_hwdep *hw = file->private_data;
+
+	if (!snd_allowed_ctx())
+		return -EBADFD;
+
 	if (hw->ops.read)
 		return hw->ops.read(hw, buf, count, offset);
 	return -ENXIO;	
@@ -74,6 +82,10 @@ static ssize_t snd_hwdep_write(struct file * file, const char __user *buf,
 			       size_t count, loff_t *offset)
 {
 	struct snd_hwdep *hw = file->private_data;
+
+	if (!snd_allowed_ctx())
+		return -EBADFD;
+
 	if (hw->ops.write)
 		return hw->ops.write(hw, buf, count, offset);
 	return -ENXIO;	
@@ -85,6 +97,9 @@ static int snd_hwdep_open(struct inode *inode, struct file * file)
 	struct snd_hwdep *hw;
 	int err;
 	wait_queue_t wait;
+
+	if (!snd_allowed_ctx())
+		return -ENODEV;
 
 	if (major == snd_major) {
 		hw = snd_lookup_minor_data(iminor(inode),
@@ -179,6 +194,10 @@ static int snd_hwdep_release(struct inode *inode, struct file * file)
 static unsigned int snd_hwdep_poll(struct file * file, poll_table * wait)
 {
 	struct snd_hwdep *hw = file->private_data;
+
+	if (!snd_allowed_ctx())
+		return 0;
+
 	if (hw->ops.poll)
 		return hw->ops.poll(hw, file, wait);
 	return 0;
@@ -244,6 +263,10 @@ static long snd_hwdep_ioctl(struct file * file, unsigned int cmd,
 {
 	struct snd_hwdep *hw = file->private_data;
 	void __user *argp = (void __user *)arg;
+
+	if (!snd_allowed_ctx())
+		return -EBADFD;
+
 	switch (cmd) {
 	case SNDRV_HWDEP_IOCTL_PVERSION:
 		return put_user(SNDRV_HWDEP_VERSION, (int __user *)argp);
@@ -262,6 +285,10 @@ static long snd_hwdep_ioctl(struct file * file, unsigned int cmd,
 static int snd_hwdep_mmap(struct file * file, struct vm_area_struct * vma)
 {
 	struct snd_hwdep *hw = file->private_data;
+
+	if (!snd_allowed_ctx())
+		return -EBADFD;
+
 	if (hw->ops.mmap)
 		return hw->ops.mmap(hw, file, vma);
 	return -ENXIO;

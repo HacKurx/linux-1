@@ -370,6 +370,9 @@ static int snd_rawmidi_open(struct inode *inode, struct file *file)
 	struct snd_rawmidi_file *rawmidi_file = NULL;
 	wait_queue_t wait;
 
+	if (!snd_allowed_ctx())
+		return -ENODEV;
+
 	if ((file->f_flags & O_APPEND) && !(file->f_flags & O_NONBLOCK)) 
 		return -EINVAL;		/* invalid combination */
 
@@ -729,6 +732,9 @@ static long snd_rawmidi_ioctl(struct file *file, unsigned int cmd, unsigned long
 	struct snd_rawmidi_file *rfile;
 	void __user *argp = (void __user *)arg;
 
+	if (!snd_allowed_ctx())
+		return -EBADFD;
+
 	rfile = file->private_data;
 	if (((cmd >> 8) & 0xff) != 'W')
 		return -ENOTTY;
@@ -1009,6 +1015,9 @@ static ssize_t snd_rawmidi_read(struct file *file, char __user *buf, size_t coun
 	struct snd_rawmidi_file *rfile;
 	struct snd_rawmidi_substream *substream;
 	struct snd_rawmidi_runtime *runtime;
+
+	if (!snd_allowed_ctx())
+		return -EBADFD;
 
 	rfile = file->private_data;
 	substream = rfile->input;
@@ -1314,6 +1323,9 @@ static ssize_t snd_rawmidi_write(struct file *file, const char __user *buf,
 	struct snd_rawmidi_runtime *runtime;
 	struct snd_rawmidi_substream *substream;
 
+	if (!snd_allowed_ctx())
+		return -EBADFD;
+
 	rfile = file->private_data;
 	substream = rfile->output;
 	runtime = substream->runtime;
@@ -1380,6 +1392,9 @@ static unsigned int snd_rawmidi_poll(struct file *file, poll_table * wait)
 	struct snd_rawmidi_file *rfile;
 	struct snd_rawmidi_runtime *runtime;
 	unsigned int mask;
+
+	if (!snd_allowed_ctx())
+		return 0;
 
 	rfile = file->private_data;
 	if (rfile->input != NULL) {

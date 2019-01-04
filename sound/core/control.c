@@ -52,6 +52,9 @@ static int snd_ctl_open(struct inode *inode, struct file *file)
 	struct snd_ctl_file *ctl;
 	int i, err;
 
+	if (!snd_allowed_ctx())
+		return -ENXIO;
+
 	err = nonseekable_open(inode, file);
 	if (err < 0)
 		return err;
@@ -1510,6 +1513,9 @@ static long snd_ctl_ioctl(struct file *file, unsigned int cmd, unsigned long arg
 	int __user *ip = argp;
 	int err;
 
+	if (!snd_allowed_ctx())
+		return -EBADFD;
+
 	ctl = file->private_data;
 	card = ctl->card;
 	if (snd_BUG_ON(!card))
@@ -1574,6 +1580,9 @@ static ssize_t snd_ctl_read(struct file *file, char __user *buffer,
 	int err = 0;
 	ssize_t result = 0;
 
+	if (!snd_allowed_ctx())
+		return -EBADFD;
+
 	ctl = file->private_data;
 	if (snd_BUG_ON(!ctl || !ctl->card))
 		return -ENXIO;
@@ -1629,6 +1638,9 @@ static unsigned int snd_ctl_poll(struct file *file, poll_table * wait)
 {
 	unsigned int mask;
 	struct snd_ctl_file *ctl;
+
+	if (!snd_allowed_ctx())
+		return 0;
 
 	ctl = file->private_data;
 	if (!ctl->subscribed)
@@ -1735,6 +1747,9 @@ EXPORT_SYMBOL(snd_ctl_unregister_ioctl_compat);
 static int snd_ctl_fasync(int fd, struct file * file, int on)
 {
 	struct snd_ctl_file *ctl;
+
+	if (!snd_allowed_ctx())
+		return -EBADFD;
 
 	ctl = file->private_data;
 	return fasync_helper(fd, file, on, &ctl->fasync);
