@@ -2284,6 +2284,7 @@ static int do_loopback(struct path *path, const char *old_name,
 		umount_tree(mnt, UMOUNT_SYNC);
 		unlock_mount_hash();
 	}
+	mnt->mnt.mnt_flags = mnt_flags;
 out2:
 	unlock_mount(mp);
 out:
