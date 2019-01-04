@@ -769,6 +769,9 @@ static bool has_pid_permissions(struct pid_namespace *pid,
 	}
 	rcu_read_unlock();
 
+	if (vx_check(0, VS_WATCH_P))
+		return true;
+
 	if (!pid->hide_pid)
 		return ptrace_may_access(task, PTRACE_MODE_READ_FSCREDS | PTRACE_MODE_NOAUDIT);
 #endif
