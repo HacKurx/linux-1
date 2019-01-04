@@ -375,6 +375,7 @@ out:
 int dx_permission(const struct inode *inode, int mask)
 {
 	int ret = __dx_permission(inode, mask);
+#if 0
 	if (unlikely(ret)) {
 #ifndef	CONFIG_VSERVER_WARN_DEVPTS
 		if (inode->i_sb->s_magic != DEVPTS_SUPER_MAGIC)
@@ -384,6 +385,7 @@ int dx_permission(const struct inode *inode, int mask)
 				       mask, inode->i_sb->s_id, inode,
 				       i_tag_read(inode), inode->i_ino);
 	}
+#endif
 	return ret;
 }
 
