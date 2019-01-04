@@ -135,6 +135,7 @@ struct audit_context {
 	struct sockaddr_storage *sockaddr;
 	size_t sockaddr_len;
 				/* Save things to print about task_struct */
+	vxid_t		    xid;
 	pid_t		    pid, ppid;
 	kuid_t		    uid, euid, suid, fsuid;
 	kgid_t		    gid, egid, sgid, fsgid;
