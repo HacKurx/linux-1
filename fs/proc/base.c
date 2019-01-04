@@ -2671,6 +2671,13 @@ static int proc_pident_readdir(struct file *file, struct dir_context *ctx,
 		goto out;
 
 	for (p = ents + (ctx->pos - 2); p <= ents + nents - 1; p++) {
+		if (task_vx_flags(task, VXF_HIDE_VINFO, 0) &&
+				(p->len == 5) &&
+				(!memcmp(p->name, "vinfo", 5) ||
+				!memcmp(p->name, "ninfo", 5))) {
+			continue;
+		}
+
 		if (!proc_fill_cache(file, ctx, p->name, p->len,
 				proc_pident_instantiate, task, p))
 			break;
