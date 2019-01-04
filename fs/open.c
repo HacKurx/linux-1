@@ -1008,6 +1008,10 @@ static inline int build_open_flags(int flags, umode_t mode, struct open_flags *o
 	if (flags & O_APPEND)
 		acc_mode |= MAY_APPEND;
 
+	/* Check exec permissions on open() */
+	if (flags & O_MAYEXEC)
+		acc_mode |= MAY_OPENEXEC;
+
 	op->acc_mode = acc_mode;
 
 	op->intent = flags & O_PATH ? 0 : LOOKUP_OPEN;

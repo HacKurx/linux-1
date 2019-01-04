@@ -3210,6 +3210,14 @@ static int may_open(struct path *path, int acc_mode, int flag)
 		mark_inode_dirty(inode);
 	}
 #endif
+
+	if ((acc_mode & MAY_OPENEXEC)
+			&& (S_ISREG(inode->i_mode) || S_ISDIR(inode->i_mode))
+			&& (path->mnt && (path->mnt->mnt_flags & MNT_NOEXEC)))
+		return -EACCES;
+
+	acc_mode &= ~MAY_OPENEXEC;
+
 	error = inode_permission(inode, MAY_OPEN | acc_mode);
 	if (error)
 		return error;
