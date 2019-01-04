@@ -39,8 +39,8 @@ static inline void __vx_acc_sock(struct vx_info *vxi,
 	if (vxi) {
 		int type = vx_sock_type(family);
 
-		atomic_long_inc(&vxi->cacct.sock[type][pos].count);
-		atomic_long_add(size, &vxi->cacct.sock[type][pos].total);
+		atomic_long_inc_unchecked(&vxi->cacct.sock[type][pos].count);
+		atomic_long_add_unchecked(size, &vxi->cacct.sock[type][pos].total);
 	}
 }
 

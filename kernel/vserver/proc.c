@@ -98,7 +98,7 @@ static int proc_virtual_status(char *buffer)
 		atomic_read(&vs_global_pid_ns),
 		atomic_read(&init_task.usage),
 		atomic_read(&init_task.nsproxy->count),
-		init_task.fs->users);
+		atomic_read(&init_task.fs->users));
 }
 
 

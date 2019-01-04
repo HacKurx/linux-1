@@ -100,7 +100,7 @@ void vx_update_load(struct vx_info *vxi)
 
 	vxi->cvirt.load_last = now;
 out:
-	atomic_inc(&vxi->cvirt.load_updates);
+	atomic_inc_unchecked(&vxi->cvirt.load_updates);
 	spin_unlock_irqrestore(&vxi->cvirt.load_lock, flags);
 }
 
@@ -258,7 +258,7 @@ int vc_virt_stat(struct vx_info *vxi, void __user *data)
 	vc_data.nr_running = atomic_read(&cvirt->nr_running);
 	vc_data.nr_uninterruptible = atomic_read(&cvirt->nr_uninterruptible);
 	vc_data.nr_onhold = atomic_read(&cvirt->nr_onhold);
-	vc_data.nr_forks = atomic_read(&cvirt->total_forks);
+	vc_data.nr_forks = atomic_read_unchecked(&cvirt->total_forks);
 	vc_data.load[0] = cvirt->load[0];
 	vc_data.load[1] = cvirt->load[1];
 	vc_data.load[2] = cvirt->load[2];

@@ -14,7 +14,7 @@
 	(unsigned long)__rlim_rmax(limit, r),	\
 	VX_VLIM(__rlim_soft(limit, r)),		\
 	VX_VLIM(__rlim_hard(limit, r)),		\
-	atomic_read(&__rlim_lhit(limit, r))
+	atomic_read_unchecked(&__rlim_lhit(limit, r))
 
 static inline int vx_info_proc_limit(struct _vx_limit *limit, char *buffer)
 {

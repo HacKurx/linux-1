@@ -47,11 +47,11 @@ struct _vx_cvirt {
 	uint64_t bias_clock;		/* offset in clock_t */
 
 	spinlock_t load_lock;		/* lock for the load averages */
-	atomic_t load_updates;		/* nr of load updates done so far */
+	atomic_unchecked_t load_updates; /* nr of load updates done so far */
 	uint32_t load_last;		/* last time load was calculated */
 	uint32_t load[3];		/* load averages 1,5,15 */
 
-	atomic_t total_forks;		/* number of forks so far */
+	atomic_unchecked_t total_forks;	/* number of forks so far */
 
 	struct _vx_syslog syslog;
 };
@@ -72,7 +72,8 @@ static inline void __dump_vx_cvirt(struct _vx_cvirt *cvirt)
 		atomic_read(&cvirt->nr_uninterruptible),
 		atomic_read(&cvirt->nr_onhold));
 	/* add rest here */
-	printk("\t total_forks = %d\n", atomic_read(&cvirt->total_forks));
+	printk("\t total_forks = %d\n",
+		atomic_read_unchecked(&cvirt->total_forks));
 }
 
 #endif

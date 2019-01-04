@@ -129,9 +129,7 @@ static struct vx_info *__alloc_vx_info(vxid_t xid)
 		struct _vx_space *space = &new->space[index];
 
 		// filesystem
-		spin_lock(&init_fs.lock);
-		init_fs.users++;
-		spin_unlock(&init_fs.lock);
+		atomic_inc(&init_fs.users);
 		space->vx_fs = &init_fs;
 
 		/* FIXME: do we want defaults? */
@@ -212,9 +210,7 @@ static void __shutdown_vx_info(struct vx_info *vxi)
 			put_nsproxy(nsproxy);
 
 		fs = xchg(&space->vx_fs, NULL);
-		spin_lock(&fs->lock);
-		kill = !--fs->users;
-		spin_unlock(&fs->lock);
+		kill = !atomic_dec_return(&fs->users);
 		if (kill)
 			free_fs_struct(fs);
 

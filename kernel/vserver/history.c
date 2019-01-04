@@ -37,7 +37,7 @@ DEFINE_PER_CPU(struct _vx_history, vx_history_buffer);
 
 unsigned volatile int vxh_active = 1;
 
-static atomic_t sequence = ATOMIC_INIT(0);
+static atomic_unchecked_t sequence = ATOMIC_INIT(0);
 
 
 /*	vxh_advance()
@@ -54,7 +54,7 @@ struct _vx_hist_entry *vxh_advance(void *loc)
 	index = vxh_active ? (hist->counter++ % VXH_SIZE) : VXH_SIZE;
 	entry = &hist->entry[index];
 
-	entry->seq = atomic_inc_return(&sequence);
+	entry->seq = atomic_inc_return_unchecked(&sequence);
 	entry->loc = loc;
 	return entry;
 }
@@ -140,7 +140,7 @@ static void __vxh_dump_history(void)
 	unsigned int i, cpu;
 
 	printk("History:\tSEQ: %8x\tNR_CPUS: %d\n",
-		atomic_read(&sequence), NR_CPUS);
+		atomic_read_unchecked(&sequence), NR_CPUS);
 
 	for (i = 0; i < VXH_SIZE; i++) {
 		for_each_online_cpu(cpu) {

@@ -201,7 +201,7 @@ static inline void vx_reset_hits(struct _vx_limit *limit)
 	int lim;
 
 	for (lim = 0; lim < NUM_LIMITS; lim++) {
-		atomic_set(&__rlim_lhit(limit, lim), 0);
+		atomic_set_unchecked(&__rlim_lhit(limit, lim), 0);
 	}
 }
 
@@ -244,7 +244,7 @@ int vc_rlimit_stat(struct vx_info *vxi, void __user *data)
 		return -EINVAL;
 
 	vx_limit_fixup(limit, id);
-	vc_data.hits = atomic_read(&__rlim_lhit(limit, id));
+	vc_data.hits = atomic_read_unchecked(&__rlim_lhit(limit, id));
 	vc_data.value = __rlim_get(limit, id);
 	vc_data.minimum = __rlim_rmin(limit, id);
 	vc_data.maximum = __rlim_rmax(limit, id);

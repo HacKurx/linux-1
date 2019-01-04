@@ -27,7 +27,7 @@
 #define __rlim_rmax(l, r)	__rlim_val(l, r, rmax)
 
 #define __rlim_lhit(l, r)	__rlim_val(l, r, lhit)
-#define __rlim_hit(l, r)	atomic_inc(&__rlim_lhit(l, r))
+#define __rlim_hit(l, r)	atomic_inc_unchecked(&__rlim_lhit(l, r))
 
 typedef atomic_long_t rlim_atomic_t;
 typedef unsigned long rlim_t;

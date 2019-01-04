@@ -104,11 +104,11 @@ int vx_info_proc_cvirt(struct _vx_cvirt *cvirt, char *buffer)
 		atomic_read(&cvirt->nr_running),
 		atomic_read(&cvirt->nr_uninterruptible),
 		atomic_read(&cvirt->nr_onhold),
-		atomic_read(&cvirt->load_updates),
+		atomic_read_unchecked(&cvirt->load_updates),
 		LOAD_INT(a), LOAD_FRAC(a),
 		LOAD_INT(b), LOAD_FRAC(b),
 		LOAD_INT(c), LOAD_FRAC(c),
-		atomic_read(&cvirt->total_forks));
+		atomic_read_unchecked(&cvirt->total_forks));
 	return length;
 }
 

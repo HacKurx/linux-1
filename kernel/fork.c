@@ -2002,7 +2002,7 @@ static __latent_entropy struct task_struct *copy_process(
 	if (vxi) {
 		claim_vx_info(vxi, p);
 		atomic_inc(&vxi->cvirt.nr_threads);
-		atomic_inc(&vxi->cvirt.total_forks);
+		atomic_inc_unchecked(&vxi->cvirt.total_forks);
 		vx_nproc_inc(p);
 	}
 	nxi = p->nx_info;

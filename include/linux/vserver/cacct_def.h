@@ -6,16 +6,16 @@
 
 
 struct _vx_sock_acc {
-	atomic_long_t count;
-	atomic_long_t total;
+	atomic_long_unchecked_t count;
+	atomic_long_unchecked_t total;
 };
 
 /* context sub struct */
 
 struct _vx_cacct {
 	struct _vx_sock_acc sock[VXA_SOCK_SIZE][3];
-	atomic_t slab[8];
-	atomic_t page[6][8];
+	atomic_unchecked_t slab[8];
+	atomic_unchecked_t page[6][8];
 };
 
 #ifdef CONFIG_VSERVER_DEBUG
@@ -31,8 +31,8 @@ static inline void __dump_vx_cacct(struct _vx_cacct *cacct)
 		printk("\t [%d] =", i);
 		for (j = 0; j < 3; j++) {
 			printk(" [%d] = %8lu, %8lu", j,
-				atomic_long_read(&ptr[j].count),
-				atomic_long_read(&ptr[j].total));
+				atomic_long_read_unchecked(&ptr[j].count),
+				atomic_long_read_unchecked(&ptr[j].total));
 		}
 		printk("\n");
 	}

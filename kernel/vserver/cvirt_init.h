@@ -22,11 +22,11 @@ static inline void vx_info_init_cvirt(struct _vx_cvirt *cvirt)
 
 	spin_lock_init(&cvirt->load_lock);
 	cvirt->load_last = jiffies;
-	atomic_set(&cvirt->load_updates, 0);
+	atomic_set_unchecked(&cvirt->load_updates, 0);
 	cvirt->load[0] = 0;
 	cvirt->load[1] = 0;
 	cvirt->load[2] = 0;
-	atomic_set(&cvirt->total_forks, 0);
+	atomic_set_unchecked(&cvirt->total_forks, 0);
 
 	spin_lock_init(&cvirt->syslog.logbuf_lock);
 	init_waitqueue_head(&cvirt->syslog.log_wait);

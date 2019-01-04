@@ -12,7 +12,7 @@ void vx_slab_alloc(struct kmem_cache *cachep, gfp_t flags)
 	if (!vxi)
 		return;
 
-	atomic_add(cachep->size, &vxi->cacct.slab[what]);
+	atomic_add_unchecked(cachep->size, &vxi->cacct.slab[what]);
 }
 
 static inline
@@ -24,6 +24,6 @@ void vx_slab_free(struct kmem_cache *cachep)
 	if (!vxi)
 		return;
 
-	atomic_sub(cachep->size, &vxi->cacct.slab[what]);
+	atomic_sub_unchecked(cachep->size, &vxi->cacct.slab[what]);
 }
 

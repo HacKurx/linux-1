@@ -264,7 +264,7 @@ int vx_enter_space(struct vx_info *vxi, unsigned long mask, unsigned index)
 	if (mask & CLONE_FS) {
 		spin_lock(&fs_cur->lock);
 		current->fs = fs;
-		kill = !--fs_cur->users;
+		kill = !atomic_dec_return(&fs_cur->users);
 		spin_unlock(&fs_cur->lock);
 	}
 
@@ -341,7 +341,7 @@ int vx_set_space(struct vx_info *vxi, unsigned long mask, unsigned index)
 	if (mask & CLONE_FS) {
 		spin_lock(&fs_vxi->lock);
 		space->vx_fs = fs;
-		kill = !--fs_vxi->users;
+		kill = !atomic_dec_return(&fs_vxi->users);
 		spin_unlock(&fs_vxi->lock);
 	}
 
