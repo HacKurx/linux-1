@@ -2094,6 +2094,7 @@ int __xfrm_init_state(struct xfrm_state *x, bool init_replay)
 		if (x->props.family == AF_INET)
 			iafamily = AF_INET6;
 
+#ifdef CONFIG_IPV6
 		inner_mode_iaf = xfrm_get_mode(x->props.mode, iafamily);
 		if (inner_mode_iaf) {
 			if (inner_mode_iaf->flags & XFRM_MODE_FLAG_TUNNEL)
@@ -2101,6 +2102,10 @@ int __xfrm_init_state(struct xfrm_state *x, bool init_replay)
 			else
 				xfrm_put_mode(inner_mode_iaf);
 		}
+#else
+		inner_mode_iaf = NULL;
+#endif /* CONFIG_IPV6 */
+
 	}
 
 	x->type = xfrm_get_type(x->id.proto, family);

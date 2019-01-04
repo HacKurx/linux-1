@@ -456,11 +456,15 @@ static inline int xfrm_af2proto(unsigned int family)
 
 static inline struct xfrm_mode *xfrm_ip2inner_mode(struct xfrm_state *x, int ipproto)
 {
+#ifdef CONFIG_IPV6
 	if ((ipproto == IPPROTO_IPIP && x->props.family == AF_INET) ||
 	    (ipproto == IPPROTO_IPV6 && x->props.family == AF_INET6))
 		return x->inner_mode;
 	else
 		return x->inner_mode_iaf;
+#else
+	return x->inner_mode;
+#endif
 }
 
 struct xfrm_tmpl {
