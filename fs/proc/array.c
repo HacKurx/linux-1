@@ -417,8 +417,8 @@ int proc_pid_nsproxy(struct seq_file *m, struct pid_namespace *ns,
 {
 	struct nsproxy *nsproxy;
 
-	rcu_read_lock();
-	nsproxy = task_nsproxy(task);
+	task_lock(task);
+	nsproxy = task->nsproxy;
 	if (nsproxy == NULL)
 		goto out;
 
@@ -445,7 +445,7 @@ int proc_pid_nsproxy(struct seq_file *m, struct pid_namespace *ns,
 			(nsproxy->net_ns == init_task.nsproxy->net_ns ? 'I' : '-'));
 
 out:
-	rcu_read_unlock();
+	task_unlock(task);
 	return 0;
 }
 
