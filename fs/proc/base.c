@@ -1930,6 +1930,7 @@ int pid_revalidate(struct dentry *dentry, unsigned int flags)
 	task = get_proc_task(inode);
 
 	if (task) {
+		#if 0 /* Breaks on CLIP */
 		unsigned pid = name_to_int(&dentry->d_name);
 
 		if (pid != ~0U && pid != vx_map_pid(task->pid) &&
@@ -1943,6 +1944,7 @@ int pid_revalidate(struct dentry *dentry, unsigned int flags)
 			d_drop(dentry);
 			return 0;
 		}
+		#endif
 		if ((inode->i_mode == (S_IFDIR|S_IRUGO|S_IXUGO)) ||
 #ifdef CONFIG_GRKERNSEC_PROC_USER
 		    (inode->i_mode == (S_IFDIR|S_IRUSR|S_IXUSR)) ||
