@@ -5179,13 +5179,13 @@ void dump_path(const char *name, struct path *path)
 			  path->mnt->mnt_sb ? path->mnt->mnt_sb->s_count : -1,
 			  path->mnt->mnt_sb ? atomic_read(&path->mnt->mnt_sb->s_active) : -1,
 			  path->mnt->mnt_root,
-			  path->mnt->mnt_root ? path->mnt->mnt_root->d_lockref.count : -1);
+			  path->mnt->mnt_root ? __lockref_read(&path->mnt->mnt_root->d_lockref) : -1);
 
 	if (path && path->dentry)
 		vxdprintk(VXD_CBIT(misc, 3),
 			  "%s: path dentry=%p[#%d]", name,
 			  path->dentry,
-			  path->dentry ? path->dentry->d_lockref.count : -1);
+			  path->dentry ? __lockref_read(&path->dentry->d_lockref) : -1);
 }
 
 static inline
