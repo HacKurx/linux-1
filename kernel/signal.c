@@ -1193,6 +1193,42 @@ int do_send_sig_info(int sig, struct siginfo *info, struct task_struct *p,
 	return ret;
 }
 
+
+/* helper */
+static inline int
+_kill_all(int sig, struct siginfo *info)
+{
+	struct task_struct *p;
+	int retval = 0, count = 0;
+
+	read_lock(&tasklist_lock);
+	if (current->pid == 1) {
+		for_each_process(p) {
+			if (p->pid > 1) {
+				int err = group_send_sig_info(sig, info, p);
+				++count;
+				if (err != -EPERM)
+					retval = err;
+			}
+		}
+	} else {
+		for_each_process(p) {
+			if (vx_check(vx_task_xid(p), VS_ADMIN_P|VS_IDENT) &&
+					task_pid_vnr(p) > 1 &&
+					!same_thread_group(p, current) &&
+					!vx_current_initpid(p->pid)) {
+				int err = group_send_sig_info(sig, info, p);
+				++count;
+				if (err != -EPERM)
+					retval = err;
+			}
+		}
+	}
+	read_unlock(&tasklist_lock);
+	return count ? retval : -ESRCH;
+}
+
+
 /*
  * Force a signal that the process can't ignore: if necessary
  * we unblock the signal and change any SIG_IGN to SIG_DFL.
@@ -1458,21 +1494,7 @@ static int kill_something_info(int sig, struct siginfo *info, pid_t pid)
 		ret = __kill_pgrp_info(sig, info,
 				pid ? find_vpid(-pid) : task_pgrp(current));
 	} else {
-		int retval = 0, count = 0;
-		struct task_struct * p;
-
-		for_each_process(p) {
-			if (vx_check(vx_task_xid(p), VS_ADMIN|VS_IDENT) &&
-				task_pid_vnr(p) > 1 &&
-				!same_thread_group(p, current) &&
-				!vx_current_initpid(p->pid)) {
-				int err = group_send_sig_info(sig, info, p);
-				++count;
-				if (err != -EPERM)
-					retval = err;
-			}
-		}
-		ret = count ? retval : -ESRCH;
+		ret = _kill_all(sig, info);
 	}
 	read_unlock(&tasklist_lock);
 
