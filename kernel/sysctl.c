@@ -1059,7 +1059,7 @@ static struct ctl_table kern_table[] = {
 	},
 #endif
 #endif
-#if defined(CONFIG_MMU)
+#if defined(CONFIG_MMU) && !defined(CONFIG_PAX_ASLR)
 	{
 		.procname	= "randomize_va_space",
 		.data		= &randomize_va_space,

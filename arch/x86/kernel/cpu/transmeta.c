@@ -89,11 +89,13 @@ static void init_transmeta(struct cpuinfo_x86 *c)
 	set_cpu_cap(c, X86_FEATURE_CONSTANT_TSC);
 
 #ifdef CONFIG_SYSCTL
+#ifndef CONFIG_PAX_ASLR
 	/*
 	 * randomize_va_space slows us down enormously;
 	 * it probably triggers retranslation of x86->native bytecode
 	 */
 	randomize_va_space = 0;
+#endif
 #endif
 }
 

@@ -2357,7 +2357,11 @@ void drop_slab_node(int nid);
 #ifndef CONFIG_MMU
 #define randomize_va_space 0
 #else
+#ifdef CONFIG_PAX_ASLR
+#define randomize_va_space 2
+#else
 extern int randomize_va_space;
+#endif
 #endif
 
 const char * arch_vma_name(struct vm_area_struct *vma);
