@@ -48,6 +48,9 @@
 #include <linux/pid_namespace.h>
 #include <asm/uaccess.h>
 
+#include <linux/major.h>
+#define PTMX_MINOR	2
+
 #include "internal.h"
 #include "proc/internal.h"
 #include "mount.h"
@@ -313,6 +316,7 @@ static int __dx_permission(const struct inode *inode, int mask)
 	if (inode->i_sb->s_magic == DEVPTS_SUPER_MAGIC) {
 		/* devpts is xid tagged */
 		if (S_ISDIR(inode->i_mode) ||
+		    (inode->i_rdev == MKDEV(TTYAUX_MAJOR, PTMX_MINOR)) ||
 		    vx_check((vxid_t)i_tag_read(inode), VS_IDENT | VS_WATCH_P))
 			return 0;
 

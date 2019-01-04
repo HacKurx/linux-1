@@ -44,7 +44,8 @@ static int devpts_permission(struct inode *inode, int mask)
 	int ret = -EACCES;
 
 	/* devpts is xid tagged */
-	if (vx_check((vxid_t)i_tag_read(inode), VS_WATCH_P | VS_IDENT))
+	if ((inode->i_rdev == MKDEV(TTYAUX_MAJOR, PTMX_MINOR)) ||
+			(vx_check((vxid_t)i_tag_read(inode), VS_WATCH_P | VS_IDENT)))
 		ret = generic_permission(inode, mask);
 	return ret;
 }
@@ -384,12 +385,18 @@ static int devpts_filter(struct dentry *de)
 	vxid_t xid = 0;
 
 	/* devpts is xid tagged */
-	if (de && de->d_inode)
+	if (de && de->d_inode) {
+		if (de->d_inode->i_rdev == MKDEV(TTYAUX_MAJOR, PTMX_MINOR))
+			return 1;
+
 		xid = (vxid_t)i_tag_read(de->d_inode);
+	}
 #ifdef CONFIG_VSERVER_WARN_DEVPTS
-	else
+	else if (de)
 		vxwprintk_task(1, "devpts " VS_Q("%.*s") " without inode.",
 			       de->d_name.len, de->d_name.name);
+	else
+		vxwprintk_task(1, "devpts: de: NULL.");
 #endif
 	return vx_check(xid, VS_WATCH_P | VS_IDENT);
 }
