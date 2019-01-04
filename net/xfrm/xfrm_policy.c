@@ -33,6 +33,8 @@
 #include <net/snmp.h>
 #endif
 
+#include <linux/vserver/debug.h>
+
 #include "xfrm_hash.h"
 
 #define XFRM_QUEUE_TMO_MIN ((unsigned)(HZ/10))
@@ -2254,14 +2256,21 @@ struct dst_entry *xfrm_lookup(struct net *net, struct dst_entry *dst_orig,
 		xflo.flags = flags;
 
 		/* To accelerate a bit...  */
-		if ((dst_orig->flags & DST_NOXFRM) ||
-		    !net->xfrm.policy_count[XFRM_POLICY_OUT])
+		if ((dst_orig->flags & DST_NOXFRM))
 			goto nopol;
 
 		flo = flow_cache_lookup(net, fl, family, dir,
 					xfrm_bundle_lookup, &xflo);
-		if (flo == NULL)
+		if (flo == NULL) {
+			if (sk && sk->sk_nx_info && !(sk->sk_nx_info->nx_flags & NXF_NO_SP)) {
+				vxwprintk_task(VX_WARNLEVEL,
+						"denied network access without a SP");
+				err = -EPERM;
+				goto dropdst;
+			}
 			goto nopol;
+		}
+
 		if (IS_ERR(flo)) {
 			err = PTR_ERR(flo);
 			goto dropdst;

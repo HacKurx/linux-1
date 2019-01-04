@@ -24,6 +24,8 @@
 #define NXF_SC_HELPER		(1ULL << 36)
 #define NXF_PERSISTENT		(1ULL << 38)
 
+#define NXF_NO_SP		(1ULL << 48)
+
 #define NXF_ONE_TIME		(0x0005ULL << 32)
 
 
