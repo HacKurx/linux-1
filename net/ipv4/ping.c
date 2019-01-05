@@ -375,28 +375,19 @@ static int ping_check_bind_addr(struct sock *sk, struct inet_sock *isk,
 	return 0;
 }
 
-static int ping_set_saddr(struct sock *sk, struct sockaddr *saddr)
+static void ping_set_saddr(struct sock *sk, struct sockaddr *saddr)
 {
-	int err;
-	struct inet_sock *isk = inet_sk(sk);
 	if (saddr->sa_family == AF_INET) {
+		struct inet_sock *isk = inet_sk(sk);
 		struct sockaddr_in *addr = (struct sockaddr_in *) saddr;
-		struct nx_v4_sock_addr nsa;
-		err = v4_map_sock_addr(isk, addr, &nsa);
-		if (err)
-			return err;
-		v4_set_sock_addr(isk, &nsa);
+		isk->inet_rcv_saddr = isk->inet_saddr = addr->sin_addr.s_addr;
 #if IS_ENABLED(CONFIG_IPV6)
 	} else if (saddr->sa_family == AF_INET6) {
 		struct sockaddr_in6 *addr = (struct sockaddr_in6 *) saddr;
-		struct nx_v6_sock_addr nsa;
-		err = v6_map_sock_addr(inet, addr, &nsa);
-		if (err)
-			return err;
-		v6_set_sock_addr(inet, &nsa);
+		struct ipv6_pinfo *np = inet6_sk(sk);
+		sk->sk_v6_rcv_saddr = np->saddr = addr->sin6_addr;
 #endif
 	}
-	return 0;
 }
 
 static void ping_clear_saddr(struct sock *sk, int dif)
@@ -435,11 +426,8 @@ int ping_bind(struct sock *sk, struct sockaddr *uaddr, int addr_len)
 	if (isk->inet_num != 0)
 		goto out;
 
-	err = ping_set_saddr(sk, uaddr);
-	if (err)
-		goto out;
-
 	err = -EADDRINUSE;
+	ping_set_saddr(sk, uaddr);
 	snum = ntohs(((struct sockaddr_in *)uaddr)->sin_port);
 	if (ping_get_port(sk, snum) != 0) {
 		ping_clear_saddr(sk, dif);
