@@ -19,6 +19,9 @@
 #include <linux/fs_struct.h>
 #include <linux/cred.h>
 #include <asm/uaccess.h>
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+#include <linux/security.h>
+#endif
 
 #include <linux/vs_context.h>
 #include <linux/vserver/space.h>
@@ -292,9 +295,15 @@ int vx_enter_space(struct vx_info *vxi, unsigned long mask, unsigned index)
 			current->real_cred, current->cred);
 
 		if (space->vx_cred) {
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+			down_read(&security_sem);
+#endif
 			cred = __prepare_creds(space->vx_cred);
 			if (cred)
 				commit_creds(cred);
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+			up_read(&security_sem);
+#endif
 		}
 	}
 

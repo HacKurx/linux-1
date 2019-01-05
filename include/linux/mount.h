@@ -32,6 +32,12 @@ struct mnt_namespace;
 #define MNT_SHRINKABLE	0x100
 #define MNT_WRITE_HOLD	0x200
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+#define MNT_NOSYMFOLLOW	0x400
+#define MNT_NOLOCK	0x800
+#define MNT_TRACE	0x4000
+#endif
+
 #define MNT_SHARED	0x1000	/* if the vfsmount is a shared mount */
 #define MNT_UNBINDABLE	0x2000	/* if the vfsmount is a unbindable mount */
 /*

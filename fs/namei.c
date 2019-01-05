@@ -47,6 +47,8 @@
 #include <linux/vs_context.h>
 #include <linux/pid_namespace.h>
 #include <asm/uaccess.h>
+#include <linux/magic.h>
+#include <linux/proc_ns.h>
 
 #include <linux/major.h>
 #define PTMX_MINOR	2
@@ -1990,6 +1992,15 @@ static inline int should_follow_link(struct nameidata *nd, struct path *link,
 		return 0;
 	if (!follow)
 		return 0;
+
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	/* CLIP-TODO : check */
+	if (link->mnt && unlikely(link->mnt->mnt_flags & MNT_NOSYMFOLLOW)) {
+		  path_to_nameidata(link, nd);
+		  return -ENOENT;
+	}
+#endif
+
 	/* make sure that d_is_symlink above matches inode */
 	if (nd->flags & LOOKUP_RCU) {
 		if (read_seqcount_retry(&link->dentry->d_seq, seq))
@@ -3275,7 +3286,11 @@ static inline int open_to_namei_flags(int flag)
 	return flag;
 }
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+static int may_o_create(const struct path *dir, struct dentry *dentry, umode_t mode, struct nameidata *nd)
+#else
 static int may_o_create(const struct path *dir, struct dentry *dentry, umode_t mode)
+#endif
 {
 	struct user_namespace *s_user_ns;
 	int error = security_path_mknod(dir, dentry, mode, 0);
@@ -3447,7 +3462,11 @@ static int lookup_open(struct nameidata *nd, struct path *path,
 				goto no_open;
 			/* No side effects, safe to clear O_CREAT */
 		} else {
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+			create_error = may_o_create(&nd->path, dentry, mode, nd);
+#else
 			create_error = may_o_create(&nd->path, dentry, mode);
+#endif
 			if (create_error) {
 				open_flag &= ~O_CREAT;
 				if (open_flag & O_EXCL)

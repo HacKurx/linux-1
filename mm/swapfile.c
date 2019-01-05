@@ -2457,6 +2457,11 @@ SYSCALL_DEFINE2(swapon, const char __user *, specialfile, int, swap_flags)
 		goto bad_swap;
 	}
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	error = security_file_swapon(swap_file, name->name);
+	if (error)
+		goto bad_swap;
+#endif
 	p->swap_file = swap_file;
 	mapping = swap_file->f_mapping;
 	inode = mapping->host;

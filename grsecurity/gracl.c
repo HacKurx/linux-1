@@ -2769,5 +2769,6 @@ EXPORT_SYMBOL_GPL(gr_acl_is_enabled);
 #ifdef CONFIG_SECURITY
 EXPORT_SYMBOL_GPL(gr_check_user_change);
 EXPORT_SYMBOL_GPL(gr_check_group_change);
+EXPORT_SYMBOL_GPL(gr_acl_enable_at_secure);
 #endif
 

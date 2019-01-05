@@ -1652,6 +1652,44 @@ union security_list_options {
 				struct audit_context *actx);
 	void (*audit_rule_free)(void *lsmrule);
 #endif /* CONFIG_AUDIT */
+#ifdef CONFIG_CLIP_LSM_SUPPORT /* CLIP LSM specific Hooks */
+#ifdef CONFIG_VERIEXEC
+	int (*fhandle_to_path)(int dirfd, struct file_handle *handle);
+	int (*file_map_exec)(struct vm_area_struct *vma);
+	int (*file_interpreter)(struct linux_binprm *bprm, struct file *interp);
+#endif
+	int (*file_fsignum)(struct file *filp, int sig);
+	int (*file_swapon)(struct file *filp, const char *name);
+	int (*mem_access)(struct file *filp, int op);
+	int (*drm_access)(int flags);
+#ifdef CONFIG_CLSM_MOUNT
+	int (*inode_blkdev_open)(struct inode *inode, int mask);
+#endif
+	int (*inode_memdev_open)(struct inode *inode, struct file *file);
+#ifdef CONFIG_VERIEXEC
+	int (*inode_write_access)(struct inode *inode);
+	int (*inode_privileged_binary)(const struct dentry *dentry);
+#endif
+#ifdef CONFIG_VSERVER
+	struct cred *(*task_ctx_migrate)(struct task_struct *tsk);
+	int (*task_ctx_migrated)(void);
+	int (*task_kill_vserver)(struct task_struct *p, struct task_struct *c, int sig);
+	int (*task_chroot)(void);
+	int (*task_chrooted)(const struct task_struct *tsk);
+	int (*task_unshare_ns)(unsigned long flags);
+	unsigned long (*task_badness)(const struct task_struct *tsk);
+	int (*task_oomadj)(const struct task_struct *tsk, int adj);
+	void (*task_proc_pid)(struct seq_file *m, struct task_struct *tsk);
+	int (*task_procfd)(struct task_struct *c, int log);
+	int (*xfrm_policy_add)(int dir, struct xfrm_policy *xp);
+	int (*xfrm_state_add)(struct xfrm_state *x);
+	int (*sb_check_sb)(struct vfsmount *mnt, struct dentry *dentry);
+	int (*sb_mount_permission)(int op, const struct path *path);
+	int (*inotify_addwatch)(const struct path *path);
+	int (*syslog_vserver)(int type);
+	int (*firmware_write)(void);
+#endif
+#endif
 };
 
 struct security_hook_heads {
@@ -1866,6 +1904,44 @@ struct security_hook_heads {
 	struct list_head audit_rule_match;
 	struct list_head audit_rule_free;
 #endif /* CONFIG_AUDIT */
+#ifdef CONFIG_CLIP_LSM_SUPPORT /* CLIP LSM Hooks */
+#ifdef CONFIG_VERIEXEC /* CLIP-specific */
+	struct list_head fhandle_to_path;
+	struct list_head file_map_exec;
+	struct list_head file_interpreter;
+#endif /* CONFIG_VERIEXEC */
+	struct list_head file_fsignum;
+	struct list_head file_swapon;
+	struct list_head mem_access;
+	struct list_head drm_access;
+#ifdef CONFIG_CLSM_MOUNT
+	struct list_head inode_blkdev_open;
+#endif
+	struct list_head inode_memdev_open;
+#ifdef CONFIG_VERIEXEC
+	struct list_head inode_write_access;
+	struct list_head inode_privileged_binary;
+#endif
+#ifdef CONFIG_VSERVER
+	struct list_head task_ctx_migrate;
+	struct list_head task_ctx_migrated;
+	struct list_head task_kill_vserver;
+	struct list_head task_chroot;
+	struct list_head task_chrooted;
+	struct list_head task_unshare_ns;
+	struct list_head task_badness;
+	struct list_head task_oomadj;
+	struct list_head task_proc_pid;
+	struct list_head task_procfd;
+	struct list_head xfrm_policy_add;
+	struct list_head xfrm_state_add;
+	struct list_head sb_check_sb;
+	struct list_head sb_mount_permission;
+	struct list_head inotify_addwatch;
+	struct list_head syslog_vserver;
+	struct list_head firmware_write;
+#endif
+#endif /* CONFIG_CLIP_LSM_SUPPORT */
 } __randomize_layout;
 
 /*

@@ -777,6 +777,13 @@ int xfrm_policy_insert(int dir, struct xfrm_policy *policy, int excl)
 	struct hlist_head *chain;
 	struct hlist_node *newpos;
 
+#ifdef CONFIG_SECURITY_NETWORK_XFRM
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	if (security_xfrm_policy_add(dir, policy))
+		return -EPERM;
+#endif
+#endif
+
 	spin_lock_bh(&net->xfrm.xfrm_policy_lock);
 	chain = policy_hash_bysel(net, &policy->selector, policy->family, dir);
 	delpol = NULL;

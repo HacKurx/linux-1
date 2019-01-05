@@ -151,13 +151,25 @@ EXPORT_SYMBOL(set_groups);
 int set_current_groups(struct group_info *group_info)
 {
 	struct cred *new;
-
+	int ret;
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	down_read(&security_sem);
+#endif
 	new = prepare_creds();
-	if (!new)
+	if (!new) {
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+		up_read(&security_sem);
+#endif
 		return -ENOMEM;
+	}
 
 	set_groups(new, group_info);
-	return commit_creds(new);
+	ret = commit_creds(new);
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	up_read(&security_sem);
+#endif
+
+	return ret;
 }
 
 EXPORT_SYMBOL(set_current_groups);

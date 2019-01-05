@@ -301,6 +301,13 @@ static int __ptrace_may_access(struct task_struct *task, unsigned int mode)
 	kuid_t caller_uid;
 	kgid_t caller_gid;
 	int dumpable = 0;
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	int proc_p = 0, log = 1;
+	if (mode & PTRACE_MODE_PROCFD)
+		proc_p = 1;
+	if (mode & PTRACE_MODE_NOAUDIT)
+		log = 0;
+#endif
 
 	if (!(mode & PTRACE_MODE_FSCREDS) == !(mode & PTRACE_MODE_REALCREDS)) {
 		WARN(1, "denying ptrace access check without PTRACE_MODE_*CREDS\n");
@@ -345,6 +352,10 @@ static int __ptrace_may_access(struct task_struct *task, unsigned int mode)
 		goto ok;
 	if (ptrace_has_cap(tcred, mode))
 		goto ok;
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	if (proc_p && security_task_procfd(task, log))
+		goto ok;
+#endif
 	rcu_read_unlock();
 	return -EPERM;
 ok:
@@ -356,8 +367,15 @@ ok:
 	rcu_read_lock();
 	if (dumpable != SUID_DUMP_USER &&
 	    !ptrace_has_cap(__task_cred(task), mode)) {
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+		if (!(proc_p && security_task_procfd(task, log))) {
+			rcu_read_unlock();
+			return -EPERM;
+		}
+#else
 		rcu_read_unlock();
 		return -EPERM;
+#endif
 	}
 	rcu_read_unlock();
 

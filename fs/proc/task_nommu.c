@@ -280,7 +280,7 @@ static int maps_open(struct inode *inode, struct file *file,
 		return -ENOMEM;
 
 	priv->inode = inode;
-	priv->mm = proc_mem_open(inode, PTRACE_MODE_READ, NULL);
+	priv->mm = proc_mem_open(inode, PTRACE_MODE_READ | PTRACE_MODE_PROCFD, NULL);
 	if (IS_ERR(priv->mm)) {
 		int err = PTR_ERR(priv->mm);
 

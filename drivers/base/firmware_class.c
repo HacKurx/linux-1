@@ -837,7 +837,11 @@ static ssize_t firmware_data_write(struct file *filp, struct kobject *kobj,
 	struct firmware_buf *buf;
 	ssize_t retval;
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	if (security_firmware_write())
+#else
 	if (!capable(CAP_SYS_RAWIO))
+#endif
 		return -EPERM;
 
 	mutex_lock(&fw_lock);

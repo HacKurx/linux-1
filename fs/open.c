@@ -535,6 +535,12 @@ retry:
 	if (gr_handle_chroot_chroot(path.dentry, path.mnt))
 		goto dput_and_out;
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	error = security_task_chroot();
+	if (error)
+		goto dput_and_out;
+#endif
+
 	set_fs_root(current->fs, &path);
 
 	gr_handle_chroot_chdir(&path);

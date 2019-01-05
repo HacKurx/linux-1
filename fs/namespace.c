@@ -986,7 +986,11 @@ vfs_kern_mount(struct file_system_type *type, int flags, const char *name, void 
 		return ERR_PTR(-ENODEV);
 
 	if ((type->fs_flags & FS_BINARY_MOUNTDATA) &&
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	    security_sb_mount_permission(SECURITY_MOUNT_BINARY, NULL))
+#else
 	    !vx_capable(CAP_SYS_ADMIN, VXC_BINARY_MOUNT))
+#endif
 		return ERR_PTR(-EPERM);
 
 	mnt = alloc_vfsmnt(name);
@@ -1733,6 +1737,12 @@ SYSCALL_DEFINE2(umount, const char __user *, name, int, flags)
 	if (flags & MNT_FORCE && !capable(CAP_SYS_ADMIN))
 		goto dput_and_out;
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	retval = -EPERM;
+	if (security_sb_mount_permission(SECURITY_MOUNT_UMOUNT, &path))
+		goto dput_and_out;
+#endif
+
 	retval = do_umount(mnt, flags);
 dput_and_out:
 	/* we mustn't call path_put() as that would clear mnt_expiry_mark */
@@ -2154,6 +2164,11 @@ static int graft_tree(struct mount *mnt, struct mount *p, struct mountpoint *mp)
 	      d_is_dir(mnt->mnt.mnt_root))
 		return -ENOTDIR;
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	if (security_sb_check_sb(&(mnt->mnt), mp->m_dentry))
+		return -EPERM;
+#endif
+
 	return attach_recursive_mnt(mnt, p, mp, NULL);
 }
 
@@ -2184,6 +2199,11 @@ static int do_change_type(struct path *path, int flag)
 	int recurse = flag & MS_REC;
 	int type;
 	int err = 0;
+
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	if (security_sb_mount_permission(SECURITY_MOUNT_TYPE, path))
+		return -EPERM;
+#endif
 
 	if (path->dentry != path->mnt->mnt_root)
 		return -EINVAL;
@@ -2321,6 +2341,11 @@ static int do_remount(struct path *path, int flags, int mnt_flags,
 	struct super_block *sb = path->mnt->mnt_sb;
 	struct mount *mnt = real_mount(path->mnt);
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	if (security_sb_mount_permission(SECURITY_MOUNT_REMOUNT, path))
+		return -EPERM;
+#endif
+
 	if (!check_mnt(mnt))
 		return -EINVAL;
 
@@ -2393,6 +2418,11 @@ static int do_move_mount(struct path *path, const char *old_name)
 	struct mount *old;
 	struct mountpoint *mp;
 	int err;
+
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	if (security_sb_mount_permission(SECURITY_MOUNT_REMOUNT, path))
+		return -EPERM;
+#endif
 	if (!old_name || !*old_name)
 		return -EINVAL;
 	err = kern_path(old_name, LOOKUP_FOLLOW, &old_path);
@@ -2542,6 +2572,11 @@ static int do_new_mount(struct path *path, const char *fstype, int flags,
 	type = get_fs_type(fstype);
 	if (!type)
 		return -ENODEV;
+
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	if (security_sb_mount_permission(SECURITY_MOUNT_NEW, path))
+		return -EPERM;
+#endif
 
 	mnt = vfs_kern_mount(type, flags, name, data);
 	if (!IS_ERR(mnt) && (type->fs_flags & FS_HAS_SUBTYPE) &&
@@ -2849,6 +2884,14 @@ long do_mount(const char *dev_name, const char __user *dir_name,
 		mnt_flags &= ~(MNT_RELATIME | MNT_NOATIME);
 	if (flags & MS_RDONLY)
 		mnt_flags |= MNT_READONLY;
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	if (flags & MS_NOSYMFOLLOW)
+		mnt_flags |= MNT_NOSYMFOLLOW;
+	if (flags & MS_NOLOCK)
+		mnt_flags |= MNT_NOLOCK;
+	if (flags & MS_TRACE)
+		mnt_flags |= MNT_TRACE;
+#endif
 
 	/* The default atime for remount is preservation */
 	if ((flags & MS_REMOUNT) &&

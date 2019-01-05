@@ -38,6 +38,9 @@
 #include <linux/uaccess.h>
 #include <linux/poll.h>
 #include <linux/wait.h>
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+#include <linux/security.h>
+#endif
 
 #include "inotify.h"
 #include "../fdinfo.h"
@@ -740,6 +743,14 @@ SYSCALL_DEFINE3(inotify_add_watch, int, fd, const char __user *, pathname,
 	ret = inotify_find_inode(pathname, &path, flags);
 	if (ret)
 		goto fput_and_out;
+
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	ret = security_inotify_addwatch(&path);
+	if (unlikely(ret)) {
+		path_put(&path);
+		goto fput_and_out;
+	}
+#endif
 
 	/* inode held in place by reference to path; group by fget on fd */
 	inode = path.dentry->d_inode;

@@ -324,7 +324,13 @@ static long do_fcntl(int fd, unsigned int cmd, unsigned long arg,
 		if (!valid_signal(arg)) {
 			break;
 		}
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+		err = security_file_fsignum(filp, arg);
+		if (err)
+			break;
+#else
 		err = 0;
+#endif
 		filp->f_owner.signum = arg;
 		break;
 	case F_GETLEASE:

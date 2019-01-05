@@ -129,6 +129,36 @@ int __init security_module_enable(const char *module)
 	RC;							\
 })
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+#define call_ulong_hook(FUNC, IRC, ...) ({			\
+	unsigned long RC = IRC;					\
+	do {							\
+		struct security_hook_list *P;			\
+								\
+		list_for_each_entry(P, &security_hook_heads.FUNC, list) { \
+			RC = P->hook.FUNC(__VA_ARGS__);		\
+			if (RC != 0)				\
+				break;				\
+		}						\
+	} while (0);						\
+	RC;							\
+})
+
+#define call_struct_cred_hook(FUNC, IRC, ...) ({			\
+	struct cred *RC = IRC;						\
+	do {							\
+		struct security_hook_list *P;			\
+								\
+		list_for_each_entry(P, &security_hook_heads.FUNC, list) { \
+			RC = P->hook.FUNC(__VA_ARGS__);		\
+			if (RC != 0)				\
+				break;				\
+		}						\
+	} while (0);						\
+	RC;							\
+})
+#endif /* CONFIG_CLIP_LSM_SUPPORT */
+
 /* Security operations */
 
 int security_binder_set_context_mgr(struct task_struct *mgr)
@@ -1589,6 +1619,249 @@ int security_audit_rule_match(u32 secid, u32 field, u32 op, void *lsmrule,
 }
 #endif /* CONFIG_AUDIT */
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+/**
+ *  @file security_clsm.c
+ *  CLIP Linux Security Module complementary security hooks
+ *  implementation.
+ *  @author Vincent Strubel <clipos@ssi.gouv.fr>
+ *
+ *  Copyright (C) 2009 SGDN/DCSSI
+ *  Copyright (C) 2011 SGDSN/ANSSI
+ *  @n
+ *  All rights reserved.
+ *
+ */
+
+/**
+ * Mutex blocking task cred modifications while CLIP LSM
+ * is being loaded and task tags are being allocated.
+ */
+DECLARE_RWSEM(security_sem);
+EXPORT_SYMBOL(security_sem);
+
+/*
+ * Security hooks for filesystem operations.
+ */
+
+#ifdef CONFIG_VSERVER
+uint32_t
+security_mountop2vxc(int op)
+{
+	switch (op) {
+		case SECURITY_MOUNT_BINARY:
+			return VXC_BINARY_MOUNT;
+		default:
+			return 0;
+	}
+}
+EXPORT_SYMBOL(security_mountop2vxc);
+#endif
+
+int
+security_sb_mount_permission(int op, const struct path *path)
+{
+	return call_int_hook(sb_mount_permission, 0, op, path);
+}
+
+int
+security_sb_check_sb(struct vfsmount *mnt, struct dentry *dentry)
+{
+	return call_int_hook(sb_check_sb, 0, mnt, dentry);
+}
+
+/*
+ * Inode hooks.
+ */
+int
+security_inode_blkdev_open(struct inode *inode, int mask)
+{
+	return call_int_hook(inode_blkdev_open, 0, inode, mask);
+}
+
+int
+security_inode_memdev_open(struct inode *inode, struct file *filp)
+{
+	return call_int_hook(inode_memdev_open, 0, inode, filp);
+}
+
+int
+security_inode_write_access(struct inode *inode)
+{
+	return call_int_hook(inode_write_access, 0, inode);
+}
+
+int
+security_inode_privileged_binary(const struct dentry *dentry)
+{
+	return call_int_hook(inode_privileged_binary, 0, dentry);
+}
+
+
+/*
+ * File hooks.
+ */
+
+int
+security_inotify_addwatch(const struct path *path)
+{
+	return call_int_hook(inotify_addwatch, 0, path);
+}
+
+int
+security_fhandle_to_path(int dirfd, struct file_handle *handle)
+{
+	return call_int_hook(fhandle_to_path, 0, dirfd, handle);
+}
+
+int
+security_file_map_exec(struct vm_area_struct *vma)
+{
+	return call_int_hook(file_map_exec, 0, vma);
+}
+
+int
+security_file_interpreter(struct linux_binprm *bprm, struct file *file)
+{
+	return call_int_hook(file_interpreter, 0, bprm, file);
+}
+
+int
+security_file_fsignum(struct file *file, int sig)
+{
+	return call_int_hook(file_fsignum, 0, file, sig);
+}
+
+int
+security_file_swapon(struct file *file, const char *name)
+{
+	return call_int_hook(file_swapon, 0, file, name);
+}
+
+int
+security_mem_access(struct file *file, int op)
+{
+	return call_int_hook(mem_access, 0, file, op);
+}
+
+int
+security_drm_access(int flags)
+{
+	return call_int_hook(drm_access, 0, flags);
+}
+EXPORT_SYMBOL(security_drm_access);
+
+/*
+ * Task hooks.
+ */
+
+#ifdef CONFIG_VSERVER
+
+struct cred *
+security_task_ctx_migrate(struct task_struct *tsk)
+{
+	return call_struct_cred_hook(task_ctx_migrate, 0, tsk);
+}
+
+int
+security_task_ctx_migrated(void)
+{
+	return call_int_hook(task_ctx_migrated, 0, );
+}
+
+int
+security_task_kill_vserver(struct task_struct *p,
+					struct task_struct *c, int sig)
+{
+	return call_int_hook(task_kill_vserver, 0, p, c, sig);
+}
+
+#endif /* CONFIG_VSERVER */
+
+int
+security_task_chroot(void)
+{
+	return call_int_hook(task_chroot, 0, );
+}
+
+int
+security_task_chrooted(const struct task_struct *tsk)
+{
+	return call_int_hook(task_chrooted, 0, tsk);
+}
+
+int
+security_task_unshare_ns(unsigned long flags)
+{
+	return call_int_hook(task_unshare_ns, 0, flags);
+}
+
+unsigned long
+security_task_badness(const struct task_struct *tsk)
+{
+	return call_ulong_hook(task_badness, 0, tsk);
+}
+
+int
+security_task_oomadj(const struct task_struct *tsk, int oomadj)
+{
+	return call_int_hook(task_oomadj, 0, tsk, oomadj);
+}
+
+void
+security_task_proc_pid(struct seq_file *m, struct task_struct *tsk)
+{
+	call_void_hook(task_proc_pid, m, tsk);
+}
+
+int
+security_task_procfd(struct task_struct *c, int log)
+{
+	return call_int_hook(task_procfd, 0, c, log);
+}
+
+
+/*
+ * XFRM hooks.
+ */
+#ifdef CONFIG_SECURITY_NETWORK_XFRM
+
+int
+security_xfrm_policy_add(int dir, struct xfrm_policy *policy)
+{
+	return call_int_hook(xfrm_policy_add, 0, dir, policy);
+}
+
+int
+security_xfrm_state_add(struct xfrm_state *state)
+{
+	return call_int_hook(xfrm_state_add, 0, state);
+}
+
+
+#endif	/* CONFIG_SECURITY_NETWORK_XFRM */
+
+
+/*
+ * Misc hooks.
+ */
+#ifdef CONFIG_VSERVER
+int
+security_syslog_vserver(int type)
+{
+	return call_int_hook(syslog_vserver, 0, type);
+}
+#endif
+
+int
+security_firmware_write(void)
+{
+	return call_int_hook(firmware_write, 0, );
+}
+/* Needed by modules */
+EXPORT_SYMBOL(security_firmware_write);
+#endif /* CONFIG_CLIP_LSM_SUPPORT */
+
 struct security_hook_heads security_hook_heads = {
 	.binder_set_context_mgr =
 		LIST_HEAD_INIT(security_hook_heads.binder_set_context_mgr),
@@ -1940,4 +2213,70 @@ struct security_hook_heads security_hook_heads = {
 	.audit_rule_free =
 		LIST_HEAD_INIT(security_hook_heads.audit_rule_free),
 #endif /* CONFIG_AUDIT */
+#ifdef CONFIG_CLIP_LSM_SUPPORT /* CLIP LSM Hooks */
+#ifdef CONFIG_VERIEXEC /* CLIP-specific */
+	.fhandle_to_path =
+		LIST_HEAD_INIT(security_hook_heads.fhandle_to_path),
+	.file_map_exec =
+		LIST_HEAD_INIT(security_hook_heads.file_map_exec),
+	.file_interpreter =
+		LIST_HEAD_INIT(security_hook_heads.file_interpreter),
+#endif /* CONFIG_VERIEXEC */
+	.file_fsignum =
+		LIST_HEAD_INIT(security_hook_heads.file_fsignum),
+	.file_swapon =
+		LIST_HEAD_INIT(security_hook_heads.file_swapon),
+	.mem_access =
+		LIST_HEAD_INIT(security_hook_heads.mem_access),
+	.drm_access =
+		LIST_HEAD_INIT(security_hook_heads.drm_access),
+#ifdef CONFIG_CLSM_MOUNT
+	.inode_blkdev_open =
+		LIST_HEAD_INIT(security_hook_heads.inode_blkdev_open),
+#endif
+	.inode_memdev_open =
+		LIST_HEAD_INIT(security_hook_heads.inode_memdev_open),
+#ifdef CONFIG_VERIEXEC
+	.inode_write_access =
+		LIST_HEAD_INIT(security_hook_heads.inode_write_access),
+	.inode_privileged_binary =
+		LIST_HEAD_INIT(security_hook_heads.inode_privileged_binary),
+#endif
+#ifdef CONFIG_VSERVER
+	.task_ctx_migrate =
+		LIST_HEAD_INIT(security_hook_heads.task_ctx_migrate),
+	.task_ctx_migrated =
+		LIST_HEAD_INIT(security_hook_heads.task_ctx_migrated),
+	.task_kill_vserver =
+		LIST_HEAD_INIT(security_hook_heads.task_kill_vserver),
+	.task_chroot =
+		LIST_HEAD_INIT(security_hook_heads.task_chroot),
+	.task_chrooted =
+		LIST_HEAD_INIT(security_hook_heads.task_chrooted),
+	.task_unshare_ns =
+		LIST_HEAD_INIT(security_hook_heads.task_unshare_ns),
+	.task_badness =
+		LIST_HEAD_INIT(security_hook_heads.task_badness),
+	.task_oomadj =
+		LIST_HEAD_INIT(security_hook_heads.task_oomadj),
+	.task_proc_pid =
+		LIST_HEAD_INIT(security_hook_heads.task_proc_pid),
+	.task_procfd =
+		LIST_HEAD_INIT(security_hook_heads.task_procfd),
+	.xfrm_policy_add =
+		LIST_HEAD_INIT(security_hook_heads.xfrm_policy_add),
+	.xfrm_state_add =
+		LIST_HEAD_INIT(security_hook_heads.xfrm_state_add),
+	.sb_check_sb =
+		LIST_HEAD_INIT(security_hook_heads.sb_check_sb),
+	.sb_mount_permission =
+		LIST_HEAD_INIT(security_hook_heads.sb_mount_permission),
+	.inotify_addwatch =
+		LIST_HEAD_INIT(security_hook_heads.inotify_addwatch),
+	.syslog_vserver =
+		LIST_HEAD_INIT(security_hook_heads.syslog_vserver),
+	.firmware_write =
+		LIST_HEAD_INIT(security_hook_heads.firmware_write),
+#endif
+#endif /* CONFIG_CLIP_LSM_SUPPORT */
 };

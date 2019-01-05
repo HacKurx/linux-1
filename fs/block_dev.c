@@ -34,6 +34,9 @@
 #include <linux/vs_device.h>
 #include <asm/uaccess.h>
 #include "internal.h"
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+#include <linux/security.h>
+#endif
 
 struct bdev_inode {
 	struct block_device bdev;
@@ -1271,6 +1274,13 @@ static int __blkdev_get(struct block_device *bdev, fmode_t mode, int for_part)
 	if (!disk)
 		goto out;
 	owner = disk->fops->owner;
+
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	if (security_inode_blkdev_open(bdev->bd_inode, mode)) {
+		ret = -EPERM;
+		goto out;
+	}
+#endif
 
 	disk_block_events(disk);
 	mutex_lock_nested(&bdev->bd_mutex, for_part);

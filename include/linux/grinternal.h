@@ -9,6 +9,9 @@
 #include <linux/gracl.h>
 #include <linux/grdefs.h>
 #include <linux/grmsg.h>
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+#include <linux/security_clsm.h>
+#endif
 
 void gr_add_learn_entry(const char *fmt, ...)
 	__attribute__ ((format (printf, 1, 2)));
@@ -109,7 +112,11 @@ extern rwlock_t grsec_exec_file_lock;
 			gr_to_filename1((tsk)->real_parent->exec_file->f_path.dentry, \
 			(tsk)->real_parent->exec_file->f_path.mnt) : "/")
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+#define proc_is_chrooted(tsk_a) security_task_chrooted(tsk_a)
+#else
 #define proc_is_chrooted(tsk_a)  ((tsk_a)->gr_is_chrooted)
+#endif
 
 #define have_same_root(tsk_a,tsk_b) ((tsk_a)->gr_chroot_dentry == (tsk_b)->gr_chroot_dentry)
 

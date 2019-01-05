@@ -69,6 +69,11 @@ static void show_mnt_opts(struct seq_file *m, struct vfsmount *mnt)
 		{ MNT_NOATIME, ",noatime" },
 		{ MNT_NODIRATIME, ",nodiratime" },
 		{ MNT_RELATIME, ",relatime" },
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+		{ MNT_NOSYMFOLLOW, ",nosymfollow" },
+		{ MNT_NOLOCK, ",nolock" },
+		{ MNT_TRACE,  ",trace" },
+#endif
 		{ 0, NULL }
 	};
 	const struct proc_fs_info *fs_infop;

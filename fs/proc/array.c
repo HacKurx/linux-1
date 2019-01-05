@@ -89,6 +89,9 @@
 #include <linux/fs_struct.h>
 #include <linux/vs_context.h>
 #include <linux/vs_network.h>
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+#include <linux/security.h>
+#endif
 
 #include <asm/pgtable.h>
 #include <asm/processor.h>
@@ -482,6 +485,9 @@ int proc_pid_status(struct seq_file *m, struct pid_namespace *ns,
 #if defined(CONFIG_PAX_NOEXEC) || defined(CONFIG_PAX_ASLR)
 	task_pax(m, task);
 #endif
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	security_task_proc_pid(m, task);
+#endif
 
 #if defined(CONFIG_GRKERNSEC) && !defined(CONFIG_GRKERNSEC_NO_RBAC)
 	task_grsec_rbac(m, task);
@@ -526,7 +532,7 @@ static int do_task_stat(struct seq_file *m, struct pid_namespace *ns,
 
 	state = *get_task_state(task);
 	vsize = eip = esp = 0;
-	permitted = ptrace_may_access(task, PTRACE_MODE_READ_FSCREDS | PTRACE_MODE_NOAUDIT);
+	permitted = ptrace_may_access(task, PTRACE_MODE_READ_FSCREDS | PTRACE_MODE_NOAUDIT | PTRACE_MODE_PROCFD);
 	mm = get_task_mm(task);
 	if (mm) {
 		vsize = task_vsize(mm);

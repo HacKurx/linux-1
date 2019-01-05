@@ -1457,7 +1457,11 @@ int do_syslog(int type, char __user *buf, int len, int source)
 			goto out;
 		}
 	}
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	if (!vx_check(0, VS_ADMIN|VS_WATCH) && security_syslog_vserver(type))
+#else
 	if (!vx_check(0, VS_ADMIN|VS_WATCH))
+#endif
 		return vx_do_syslog(type, buf, len);
 
 	switch (type) {

@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: GPL-2.0
+# Copyright © 2007-2018 ANSSI. All Rights Reserved.
+#
+# Makefile for the clsm code
+#
+
+ifeq ($(CONFIG_CLIP_LSM),m)
+obj-$(CONFIG_CLIP_LSM)	:= clip-lsm.o
+clip-lsm-objs :=  clip_lsm.o clsm_sysctl.o
+else
+obj-$(CONFIG_CLIP_LSM)			+= clip_lsm.o \
+						clsm_sysctl.o
+endif
+
+ifeq ($(CONFIG_DEVCTL),y)
+ifeq ($(CONFIG_CLIP_LSM),m)
+clip-lsm-objs				+= devctl.o
+else
+obj-$(CONFIG_DEVCTL)			+= devctl.o
+endif
+endif
+ifeq ($(CONFIG_VERIEXEC),y)
+ifeq ($(CONFIG_CLIP_LSM),m)
+clip-lsm-objs			+= veriexec.o \
+					veriexec_digest.o \
+					veriexec_dev.o \
+					veriexec_creds.o \
+					veriexec_vserver_hlist.o
+
+else
+obj-$(CONFIG_CLIP_LSM)			+= veriexec.o \
+					veriexec_digest.o \
+					veriexec_dev.o \
+					veriexec_creds.o \
+					veriexec_vserver_hlist.o
+
+endif
+endif
+

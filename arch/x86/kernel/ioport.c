@@ -28,8 +28,13 @@ asmlinkage long sys_ioperm(unsigned long from, unsigned long num, int turn_on)
 
 	if ((from + num <= from) || (from + num > IO_BITMAP_BITS))
 		return -EINVAL;
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	if (turn_on && security_mem_access(NULL, SECURITY_IO_IOPERM))
+		return -EPERM;
+#else
 	if (turn_on && !capable(CAP_SYS_RAWIO))
 		return -EPERM;
+#endif
 
 	/*
 	 * If it's the first ioperm() call in this thread's lifetime, set the
@@ -108,8 +113,13 @@ SYSCALL_DEFINE1(iopl, unsigned int, level)
 		return -EINVAL;
 	/* Trying to gain more privileges? */
 	if (level > old) {
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+		if (security_mem_access(NULL, SECURITY_IO_IOPL))
+			return -EPERM;
+#else
 		if (!capable(CAP_SYS_RAWIO))
 			return -EPERM;
+#endif
 	}
 	regs->flags = (regs->flags & ~X86_EFLAGS_IOPL) |
 		(level << X86_EFLAGS_IOPL_BIT);

@@ -2676,8 +2676,16 @@ static inline void file_end_write(struct file *file)
  * use {get,deny}_write_access() - these functions check the sign and refuse
  * to do the change if sign is wrong.
  */
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+extern int security_inode_write_access(struct inode *inode);
+#endif
 static inline int get_write_access(struct inode *inode)
 {
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	if (security_inode_write_access(inode)) {
+		return -EPERM;
+	}
+#endif
 	return atomic_inc_unless_negative(&inode->i_writecount) ? 0 : -ETXTBSY;
 }
 static inline int deny_write_access(struct file *file)

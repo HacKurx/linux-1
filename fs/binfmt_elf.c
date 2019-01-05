@@ -1126,6 +1126,12 @@ static int load_elf_binary(struct linux_binprm *bprm)
 			 */
 			would_dump(bprm, interpreter);
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+                       retval = security_file_interpreter(bprm, interpreter);
+                       if (retval)
+                               goto out_free_dentry;
+#endif
+
 			/* Get the exec headers */
 			retval = kernel_read(interpreter, 0,
 					     (void *)&loc->interp_elf_ex,

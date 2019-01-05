@@ -57,6 +57,10 @@ struct xattr;
 struct xfrm_sec_ctx;
 struct mm_struct;
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+#include <linux/security_clsm.h>
+#endif
+
 /* If capable should audit the security request */
 #define SECURITY_CAP_NOAUDIT 0
 #define SECURITY_CAP_AUDIT 1
@@ -1685,6 +1689,10 @@ static inline char *alloc_secdata(void)
 static inline void free_secdata(void *secdata)
 { }
 #endif /* CONFIG_SECURITY */
+
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+#include <linux/security_clsm_hooks.h>
+#endif
 
 #endif /* ! __LINUX_SECURITY_H */
 

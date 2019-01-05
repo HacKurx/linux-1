@@ -461,7 +461,7 @@ int is_privileged_binary(const struct dentry *dentry)
 			return 3;
 	}
 
-	return 0;
+	return security_inode_privileged_binary(dentry);
 }
 
 /*

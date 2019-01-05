@@ -268,9 +268,16 @@ SYSCALL_DEFINE2(capset, cap_user_header_t, header, const cap_user_data_t, data)
 	permitted.cap[CAP_LAST_U32] &= CAP_LAST_U32_VALID_MASK;
 	inheritable.cap[CAP_LAST_U32] &= CAP_LAST_U32_VALID_MASK;
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	down_read(&security_sem);
+#endif
 	new = prepare_creds();
-	if (!new)
+	if (!new) {
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+		up_read(&security_sem);
+#endif
 		return -ENOMEM;
+	}
 
 	ret = security_capset(new, current_cred(),
 			      &effective, &inheritable, &permitted);
@@ -279,10 +286,17 @@ SYSCALL_DEFINE2(capset, cap_user_header_t, header, const cap_user_data_t, data)
 
 	audit_log_capset(new, current_cred());
 
-	return commit_creds(new);
+	ret = commit_creds(new);
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	up_read(&security_sem);
+#endif
+	return ret;
 
 error:
 	abort_creds(new);
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	up_read(&security_sem);
+#endif
 	return ret;
 }
 
@@ -309,6 +323,7 @@ bool has_ns_capability(struct task_struct *t,
 
 	return ret;
 }
+EXPORT_SYMBOL(has_ns_capability);
 
 /**
  * has_capability - Does a task have a capability in init_user_ns

@@ -44,6 +44,10 @@
 #include <asm/tlb.h>
 #include "internal.h"
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+#include <linux/security.h>
+#endif
+
 #define CREATE_TRACE_POINTS
 #include <trace/events/oom.h>
 
@@ -220,6 +224,10 @@ unsigned long oom_badness(struct task_struct *p, struct mem_cgroup *memcg,
 	/* Normalize to oom_score_adj units */
 	adj *= totalpages / 1000;
 	points += adj;
+
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	points /= security_task_badness(p);
+#endif
 
 	/*
 	 * Never return 0 for an eligible task regardless of the root bonus and

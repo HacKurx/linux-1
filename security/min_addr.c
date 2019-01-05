@@ -7,6 +7,7 @@
 unsigned long mmap_min_addr;
 /* amount of vm to protect from userspace using CAP_SYS_RAWIO (DAC) */
 unsigned long dac_mmap_min_addr = CONFIG_DEFAULT_MMAP_MIN_ADDR;
+EXPORT_SYMBOL(dac_mmap_min_addr);
 /* amount of vm to protect from userspace using the LSM = CONFIG_LSM_MMAP_MIN_ADDR */
 
 /*

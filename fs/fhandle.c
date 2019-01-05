@@ -203,6 +203,10 @@ static int handle_to_path(int mountdirfd, struct file_handle __user *ufh,
 		goto out_handle;
 	}
 
+	retval = security_fhandle_to_path(mountdirfd, handle);
+	if (retval)
+		goto out_handle;
+
 	retval = do_handle_to_path(mountdirfd, handle, path);
 
 out_handle:

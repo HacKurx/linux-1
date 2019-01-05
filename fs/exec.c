@@ -1606,7 +1606,11 @@ static void bprm_fill_uid(struct linux_binprm *bprm)
 		 !kgid_has_mapping(bprm->cred->user_ns, gid))
 		return;
 
+#ifdef CONFIG_CLSM_NOSUID_ROOT
+	if ((mode & S_ISUID) && !uid_eq(inode->i_uid, GLOBAL_ROOT_UID)) {
+#else
 	if (mode & S_ISUID) {
+#endif /* CONFIG_CLSM_NOSUID_ROOT */
 		bprm->per_clear |= PER_CLEAR_ON_SETID;
 		bprm->cred->euid = uid;
 	}
@@ -1835,6 +1839,9 @@ static int do_execveat_common(int fd, struct filename *filename,
 	if (!bprm)
 		goto out_files;
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	down_read(&security_sem);
+#endif
 	retval = prepare_bprm_creds(bprm);
 	if (retval)
 		goto out_free;
@@ -1974,6 +1981,9 @@ static int do_execveat_common(int fd, struct filename *filename,
 	putname(filename);
 	if (displaced)
 		put_files_struct(displaced);
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	up_read(&security_sem);
+#endif
 	return retval;
 
 out_fail:
@@ -1995,6 +2005,9 @@ out_unmark:
 	current->in_execve = 0;
 
 out_free:
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	up_read(&security_sem);
+#endif
 	free_bprm(bprm);
 	kfree(pathbuf);
 
@@ -2087,6 +2100,9 @@ void set_dumpable(struct mm_struct *mm, int value)
 		new = (old & ~MMF_DUMPABLE_MASK) | value;
 	} while (cmpxchg(&mm->flags, old, new) != old);
 }
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+EXPORT_SYMBOL(set_dumpable);
+#endif
 
 SYSCALL_DEFINE3(execve,
 		const char __user *, filename,

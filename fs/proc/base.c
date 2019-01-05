@@ -437,7 +437,7 @@ static int proc_pid_wchan(struct seq_file *m, struct pid_namespace *ns,
 	wchan = get_wchan(task);
 
 	if (wchan && !lookup_symbol_name(wchan, symname)
-	    		&& ptrace_may_access(task, PTRACE_MODE_READ_FSCREDS))
+			&& ptrace_may_access(task, PTRACE_MODE_READ_FSCREDS|PTRACE_MODE_PROCFD))
 		seq_printf(m, "%s", symname);
 	else
 		seq_putc(m, '0');
@@ -716,9 +716,9 @@ static int proc_fd_access_allowed(struct inode *inode, unsigned int log)
 	task = get_proc_task(inode);
 	if (task) {
 		if (log)
-			allowed = ptrace_may_access(task, PTRACE_MODE_READ_FSCREDS);
+			allowed = ptrace_may_access(task, PTRACE_MODE_READ_FSCREDS|PTRACE_MODE_PROCFD);
 		else
-			allowed = ptrace_may_access(task, PTRACE_MODE_READ_FSCREDS | PTRACE_MODE_NOAUDIT);
+			allowed = ptrace_may_access(task, PTRACE_MODE_READ_FSCREDS | PTRACE_MODE_NOAUDIT|PTRACE_MODE_PROCFD);
 		put_task_struct(task);
 	}
 	return allowed;
@@ -1036,6 +1036,7 @@ static const struct file_operations proc_mem_operations = {
 
 static int environ_open(struct inode *inode, struct file *file)
 {
+	/* CLIP : no PTRACE_MODE_PROCFD here - check */
 	return __mem_open(inode, file, PTRACE_MODE_READ);
 }
 
@@ -1121,7 +1122,7 @@ static const struct file_operations proc_environ_operations = {
 
 static int auxv_open(struct inode *inode, struct file *file)
 {
-	return __mem_open(inode, file, PTRACE_MODE_READ_FSCREDS);
+	return __mem_open(inode, file, PTRACE_MODE_READ_FSCREDS | PTRACE_MODE_PROCFD);
 }
 
 static ssize_t auxv_read(struct file *file, char __user *buf,
@@ -1193,6 +1194,14 @@ static int __set_oom_adj(struct file *file, int oom_adj, bool legacy)
 		return -ESRCH;
 
 	mutex_lock(&oom_adj_mutex);
+
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	if (security_task_oomadj(task, oom_adj)) {
+		err = -EACCES;
+		goto err_unlock;
+	}
+#endif
+
 	if (legacy) {
 		if (oom_adj < task->signal->oom_score_adj &&
 		    !vx_capable(CAP_SYS_RESOURCE, VXC_OOM_ADJUST)) {
@@ -2621,7 +2630,12 @@ static struct dentry *proc_pident_lookup(struct inode *dir,
 	if (!task)
 		goto out_no_task;
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	/* task->pid != 1 check needed for /proc/self in a vserver jail */
+	if (task->pid != 1 && (gr_pid_is_chrooted(task) || gr_check_hidden_task(task)))
+#else
 	if (gr_pid_is_chrooted(task) || gr_check_hidden_task(task))
+#endif
 		goto out;
 
 	/* TODO: maybe we can come up with a generic approach? */
@@ -2661,7 +2675,12 @@ static int proc_pident_readdir(struct file *file, struct dir_context *ctx,
 	if (!task)
 		return -ENOENT;
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	/* task->pid != 1 check needed for /proc/self in a vserver jail */
+	if (task->pid != 1 && (gr_pid_is_chrooted(task) || gr_check_hidden_task(task)))
+#else
 	if (gr_pid_is_chrooted(task) || gr_check_hidden_task(task))
+#endif
 		goto out;
 
 	if (!dir_emit_dots(file, ctx))

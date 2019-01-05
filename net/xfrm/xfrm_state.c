@@ -1135,6 +1135,14 @@ int xfrm_state_add(struct xfrm_state *x)
 
 	to_put = NULL;
 
+#ifdef CONFIG_SECURITY_NETWORK_XFRM
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	err = security_xfrm_state_add(x);
+	if (err)
+		return err;
+#endif
+#endif
+
 	spin_lock_bh(&net->xfrm.xfrm_state_lock);
 
 	x1 = __xfrm_state_locate(x, use_spi, family);

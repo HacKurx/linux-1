@@ -1656,6 +1656,10 @@ static __latent_entropy struct task_struct *copy_process(
 			return ERR_PTR(-EINVAL);
 	}
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	down_read(&security_sem);
+#endif
+
 	retval = security_task_create(clone_flags);
 	if (retval)
 		goto fork_out;
@@ -2018,6 +2022,9 @@ static __latent_entropy struct task_struct *copy_process(
 	trace_task_newtask(p, clone_flags);
 	uprobe_copy_process(p, clone_flags);
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	up_read(&security_sem);
+#endif
 	return p;
 
 bad_fork_cancel_cgroup:
@@ -2069,6 +2076,9 @@ bad_fork_free:
 fork_out:
 	gr_log_forkfail(retval);
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	up_read(&security_sem);
+#endif
 	return ERR_PTR(retval);
 }
 

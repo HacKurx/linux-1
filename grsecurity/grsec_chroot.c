@@ -128,6 +128,57 @@ void gr_clear_chroot_entries(struct task_struct *task)
 	return;
 }	
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+#include <linux/security.h>
+#endif
+
+#ifdef CONFIG_CLSM_CHROOT_GRSEC
+#ifdef CONFIG_VSERVER
+#include <linux/vs_context.h>
+#include <linux/pid_namespace.h>
+static inline void
+get_realroot(struct path *path)
+{
+	struct dentry *root;
+	struct vfsmount *mnt;
+	struct vx_info *vxi = task_get_vx_info(current);
+	if (!vxi) {
+		struct task_struct *reaper =
+			task_active_pid_ns(current)->child_reaper;
+
+		spin_lock(&reaper->fs->lock);
+		mnt = mntget(reaper->fs->root.mnt);
+		root = dget(reaper->fs->root.dentry);
+		spin_unlock(&reaper->fs->lock);
+	} else {
+		spin_lock(&vxi->space[0].vx_fs->lock);
+		mnt = mntget(vxi->space[0].vx_fs->root.mnt);
+		root = dget(vxi->space[0].vx_fs->root.dentry);
+		spin_unlock(&vxi->space[0].vx_fs->lock);
+		put_vx_info(vxi);
+	}
+	path->dentry = root;
+	path->mnt = mnt;
+}
+
+#else /* !CONFIG_VSERVER */
+static inline void
+get_realroot(struct path *path)
+{
+	struct dentry *root;
+	struct vfsmount *mnt;
+	struct task_struct *reaper =
+			task_active_pid_ns(current)->child_reaper;
+	spin_lock(&reaper->fs->lock);
+	mnt = mntget(reaper->fs->root->mnt);
+	root = dget(reaper->fs->root->dentry);
+	spin_unlock(&reaper->fs->lock);
+	path->dentry = root;
+	path->mnt = mnt;
+}
+#endif /* !CONFIG_VSERVER */
+#endif /* CONFIG_CLSM_CHROOT_GRSEC */
+
 int
 gr_handle_chroot_unix(const pid_t pid)
 {
@@ -228,7 +279,11 @@ int gr_is_outside_chroot(const struct dentry *u_dentry, const struct vfsmount *u
 
 	path.dentry = (struct dentry *)u_dentry;
 	path.mnt = (struct vfsmount *)u_mnt;
+#ifdef CONFIG_CLSM_CHROOT_GRSEC
+	get_realroot(&currentroot);
+#else
 	get_fs_root(current->fs, &currentroot);
+#endif
 	if (path_is_under(&path, &currentroot))
 		ret = 1;
 	path_put(&currentroot);

@@ -360,9 +360,19 @@ SYSCALL_DEFINE2(setregid, gid_t, rgid, gid_t, egid)
 	if ((egid != (gid_t) -1) && !gid_valid(kegid))
 		return -EINVAL;
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	down_read(&security_sem);
+#endif
 	new = prepare_creds();
 	if (!new)
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	{
+		up_read(&security_sem);
 		return -ENOMEM;
+	}
+#else
+		return -ENOMEM;
+#endif
 	old = current_cred();
 
 	retval = -EPERM;
@@ -403,10 +413,17 @@ SYSCALL_DEFINE2(setregid, gid_t, rgid, gid_t, egid)
 		new->sgid = new->egid;
 	new->fsgid = new->egid;
 
-	return commit_creds(new);
+	retval = commit_creds(new);
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	up_read(&security_sem);
+#endif
+	return retval;
 
 error:
 	abort_creds(new);
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	up_read(&security_sem);
+#endif
 	return retval;
 }
 
@@ -427,9 +444,19 @@ SYSCALL_DEFINE1(setgid, gid_t, gid)
 	if (!gid_valid(kgid))
 		return -EINVAL;
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	down_read(&security_sem);
+#endif
 	new = prepare_creds();
 	if (!new)
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	{
+		up_read(&security_sem);
 		return -ENOMEM;
+	}
+#else
+		return -ENOMEM;
+#endif
 	old = current_cred();
 
 	retval = -EPERM;
@@ -444,10 +471,17 @@ SYSCALL_DEFINE1(setgid, gid_t, gid)
 	else
 		goto error;
 
-	return commit_creds(new);
+	retval = commit_creds(new);
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	up_read(&security_sem);
+#endif
+	return retval;
 
 error:
 	abort_creds(new);
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	up_read(&security_sem);
+#endif
 	return retval;
 }
 
@@ -511,9 +545,19 @@ SYSCALL_DEFINE2(setreuid, uid_t, ruid, uid_t, euid)
 	if ((euid != (uid_t) -1) && !uid_valid(keuid))
 		return -EINVAL;
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	down_read(&security_sem);
+#endif
 	new = prepare_creds();
 	if (!new)
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	{
+		up_read(&security_sem);
 		return -ENOMEM;
+	}
+#else
+		return -ENOMEM;
+#endif
 	old = current_cred();
 
 	retval = -EPERM;
@@ -559,10 +603,17 @@ SYSCALL_DEFINE2(setreuid, uid_t, ruid, uid_t, euid)
 	if (retval < 0)
 		goto error;
 
-	return commit_creds(new);
+	retval = commit_creds(new);
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	up_read(&security_sem);
+#endif
+	return retval;
 
 error:
 	abort_creds(new);
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	up_read(&security_sem);
+#endif
 	return retval;
 }
 
@@ -589,9 +640,19 @@ SYSCALL_DEFINE1(setuid, uid_t, uid)
 	if (!uid_valid(kuid))
 		return -EINVAL;
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	down_read(&security_sem);
+#endif
 	new = prepare_creds();
 	if (!new)
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	{
+		up_read(&security_sem);
 		return -ENOMEM;
+	}
+#else
+		return -ENOMEM;
+#endif
 	old = current_cred();
 
 	retval = -EPERM;
@@ -618,10 +679,17 @@ SYSCALL_DEFINE1(setuid, uid_t, uid)
 	if (retval < 0)
 		goto error;
 
-	return commit_creds(new);
+	retval = commit_creds(new);
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	up_read(&security_sem);
+#endif
+	return retval;
 
 error:
 	abort_creds(new);
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	up_read(&security_sem);
+#endif
 	return retval;
 }
 
@@ -651,9 +719,19 @@ SYSCALL_DEFINE3(setresuid, uid_t, ruid, uid_t, euid, uid_t, suid)
 	if ((suid != (uid_t) -1) && !uid_valid(ksuid))
 		return -EINVAL;
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	down_read(&security_sem);
+#endif
 	new = prepare_creds();
 	if (!new)
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	{
+		up_read(&security_sem);
 		return -ENOMEM;
+	}
+#else
+		return -ENOMEM;
+#endif
 
 	old = current_cred();
 
@@ -691,10 +769,17 @@ SYSCALL_DEFINE3(setresuid, uid_t, ruid, uid_t, euid, uid_t, suid)
 	if (retval < 0)
 		goto error;
 
-	return commit_creds(new);
+	retval = commit_creds(new);
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	up_read(&security_sem);
+#endif
+	return retval;
 
 error:
 	abort_creds(new);
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	up_read(&security_sem);
+#endif
 	return retval;
 }
 
@@ -739,9 +824,19 @@ SYSCALL_DEFINE3(setresgid, gid_t, rgid, gid_t, egid, gid_t, sgid)
 	if ((sgid != (gid_t) -1) && !gid_valid(ksgid))
 		return -EINVAL;
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	down_read(&security_sem);
+#endif
 	new = prepare_creds();
 	if (!new)
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	{
+		up_read(&security_sem);
 		return -ENOMEM;
+	}
+#else
+		return -ENOMEM;
+#endif
 	old = current_cred();
 
 	retval = -EPERM;
@@ -768,10 +863,17 @@ SYSCALL_DEFINE3(setresgid, gid_t, rgid, gid_t, egid, gid_t, sgid)
 		new->sgid = ksgid;
 	new->fsgid = new->egid;
 
-	return commit_creds(new);
+	retval = commit_creds(new);
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	up_read(&security_sem);
+#endif
+	return retval;
 
 error:
 	abort_creds(new);
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	up_read(&security_sem);
+#endif
 	return retval;
 }
 
@@ -816,9 +918,19 @@ SYSCALL_DEFINE1(setfsuid, uid_t, uid)
 	if (!uid_valid(kuid))
 		return old_fsuid;
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	down_read(&security_sem);
+#endif
 	new = prepare_creds();
 	if (!new)
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	{
+		up_read(&security_sem);
 		return old_fsuid;
+	}
+#else
+		return old_fsuid;
+#endif
 
 	if (uid_eq(kuid, old->uid)  || uid_eq(kuid, old->euid)  ||
 	    uid_eq(kuid, old->suid) || uid_eq(kuid, old->fsuid) ||
@@ -835,10 +947,16 @@ SYSCALL_DEFINE1(setfsuid, uid_t, uid)
 
 error:
 	abort_creds(new);
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	up_read(&security_sem);
+#endif
 	return old_fsuid;
 
 change_okay:
 	commit_creds(new);
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	up_read(&security_sem);
+#endif
 	return old_fsuid;
 }
 
@@ -859,9 +977,19 @@ SYSCALL_DEFINE1(setfsgid, gid_t, gid)
 	if (!gid_valid(kgid))
 		return old_fsgid;
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	down_read(&security_sem);
+#endif
 	new = prepare_creds();
 	if (!new)
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	{
+		up_read(&security_sem);
 		return old_fsgid;
+	}
+#else
+		return old_fsgid;
+#endif
 
 	if (gid_eq(kgid, old->gid)  || gid_eq(kgid, old->egid)  ||
 	    gid_eq(kgid, old->sgid) || gid_eq(kgid, old->fsgid) ||
@@ -877,10 +1005,16 @@ SYSCALL_DEFINE1(setfsgid, gid_t, gid)
 
 error:
 	abort_creds(new);
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	up_read(&security_sem);
+#endif
 	return old_fsgid;
 
 change_okay:
 	commit_creds(new);
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	up_read(&security_sem);
+#endif
 	return old_fsgid;
 }
 #endif /* CONFIG_MULTIUSER */

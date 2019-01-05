@@ -36,6 +36,7 @@
 
 #include <linux/pci.h>
 #include <linux/export.h>
+#include <linux/security.h>
 #include <linux/nospec.h>
 
 /**
@@ -481,9 +482,15 @@ static int drm_version(struct drm_device *dev, void *data,
  */
 int drm_ioctl_permit(u32 flags, struct drm_file *file_priv)
 {
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	/* ROOT_ONLY is only for CAP_SYS_ADMIN or CLSM privileged */
+	if (unlikely((flags & DRM_ROOT_ONLY) && security_drm_access(flags)))
+		return -EACCES;
+#else
 	/* ROOT_ONLY is only for CAP_SYS_ADMIN */
 	if (unlikely((flags & DRM_ROOT_ONLY) && !capable(CAP_SYS_ADMIN)))
 		return -EACCES;
+#endif
 
 	/* AUTH is only for authenticated or render client */
 	if (unlikely((flags & DRM_AUTH) && !drm_is_render_client(file_priv) &&

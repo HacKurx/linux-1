@@ -29,6 +29,9 @@
 #include <linux/export.h>
 #include <linux/io.h>
 #include <linux/uio.h>
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+#include <linux/security.h>
+#endif
 
 #include <linux/uaccess.h>
 
@@ -131,6 +134,12 @@ static ssize_t read_mem(struct file *file, char __user *buf,
 
 	if (!valid_phys_addr_range(p, count))
 		return -EFAULT;
+
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	if (security_mem_access(file, SECURITY_MEM_READ))
+		return -EPERM;
+#endif
+
 	read = 0;
 #ifdef __ARCH_HAS_NO_PAGE_ZERO_MAPPED
 	/* we don't have page 0 mapped on sparc and m68k.. */
@@ -213,6 +222,11 @@ static ssize_t write_mem(struct file *file, const char __user *buf,
 
 	if (!valid_phys_addr_range(p, count))
 		return -EFAULT;
+
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	if (security_mem_access(file, SECURITY_MEM_WRITE))
+		return -EPERM;
+#endif
 
 	written = 0;
 
@@ -391,6 +405,11 @@ static int mmap_mem(struct file *file, struct vm_area_struct *vma)
 						&vma->vm_page_prot))
 		return -EINVAL;
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	if (security_mem_access(file, SECURITY_MEM_MMAP))
+		return -EPERM;
+#endif
+
 	vma->vm_page_prot = phys_mem_access_prot(file, vma->vm_pgoff,
 						 size,
 						 vma->vm_page_prot);
@@ -425,6 +444,11 @@ static int mmap_kmem(struct file *file, struct vm_area_struct *vma)
 	if (!pfn_valid(pfn))
 		return -EIO;
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	if (security_mem_access(file, SECURITY_KMEM_MMAP))
+		return -EPERM;
+#endif
+
 	vma->vm_pgoff = pfn;
 	return mmap_mem(file, vma);
 }
@@ -439,6 +463,11 @@ static ssize_t read_kmem(struct file *file, char __user *buf,
 	ssize_t low_count, read, sz;
 	char *kbuf; /* k-addr because vread() takes vmlist_lock rwlock */
 	int err = 0;
+
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	if (security_mem_access(file, SECURITY_KMEM_READ))
+		return -EPERM;
+#endif
 
 	read = 0;
 	if (p < (unsigned long) high_memory) {
@@ -582,6 +611,11 @@ static ssize_t write_kmem(struct file *file, const char __user *buf,
 	ssize_t virtr = 0;
 	char *kbuf; /* k-addr because vwrite() takes vmlist_lock rwlock */
 	int err = 0;
+
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	if (security_mem_access(file, SECURITY_KMEM_WRITE))
+		return -EPERM;
+#endif
 
 	if (p < (unsigned long) high_memory) {
 		unsigned long to_write = min_t(unsigned long, count,
@@ -808,15 +842,31 @@ static loff_t memory_lseek(struct file *file, loff_t offset, int orig)
 
 static int open_port(struct inode *inode, struct file *filp)
 {
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+       if (security_mem_access(filp, SECURITY_PORT_OPEN))
+               return -EPERM;
+#endif
+
 	return capable(CAP_SYS_RAWIO) ? 0 : -EPERM;
+}
+
+static int open_mem(struct inode * inode, struct file * filp)
+{
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+       if (security_mem_access(filp, SECURITY_MEM_OPEN))
+               return -EPERM;
+       else
+               return 0;
+#else
+       return capable(CAP_SYS_RAWIO) ? 0 : -EPERM;
+#endif
 }
 
 #define zero_lseek	null_lseek
 #define full_lseek      null_lseek
 #define write_zero	write_null
 #define write_iter_zero	write_iter_null
-#define open_mem	open_port
-#define open_kmem	open_mem
+#define open_kmem	open_port
 
 static const struct file_operations __maybe_unused mem_fops = {
 	.llseek		= memory_lseek,
@@ -910,8 +960,17 @@ static int memory_open(struct inode *inode, struct file *filp)
 	const struct memdev *dev;
 
 	minor = iminor(inode);
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	if (minor >= ARRAY_SIZE(devlist)) {
+		int ret = security_inode_memdev_open(inode, filp);
+		if (!ret && filp->f_op && filp->f_op->open)
+			ret = filp->f_op->open(inode, filp);
+		return ret;
+	}
+#else
 	if (minor >= ARRAY_SIZE(devlist))
 		return -ENXIO;
+#endif
 
 	dev = &devlist[minor];
 	if (!dev->fops)
@@ -938,7 +997,12 @@ static char *mem_devnode(struct device *dev, umode_t *mode)
 	return NULL;
 }
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+struct class *mem_class;
+EXPORT_SYMBOL(mem_class);
+#else /* CONFIG_CLIP_LSM_SUPPORT */
 static struct class *mem_class;
+#endif /* CONFIG_CLIP_LSM_SUPPORT */
 
 static int __init chr_dev_init(void)
 {

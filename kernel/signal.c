@@ -768,6 +768,8 @@ static int check_kill_permission(int sig, struct siginfo *info,
 		}
 	}
 
+// FIXME: We might be re-introducing the 'PID exists' leak here
+#ifndef CONFIG_CLIP_LSM_SUPPORT
 	error = -ESRCH;
 	/* FIXME: we shouldn't return ESRCH ever, to avoid
 		  loops, maybe ENOENT or EACCES? */
@@ -777,6 +779,7 @@ static int check_kill_permission(int sig, struct siginfo *info,
 			sig, info, t, vx_task_xid(t), t->pid, current->xid);
 		return error;
 	}
+#endif
 
 	/* allow glibc communication via tgkill to other threads in our
 	   thread group */
@@ -1216,7 +1219,12 @@ _kill_all(int sig, struct siginfo *info)
 			if (vx_check(vx_task_xid(p), VS_ADMIN_P|VS_IDENT) &&
 					task_pid_vnr(p) > 1 &&
 					!same_thread_group(p, current) &&
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+					(!vx_current_initpid(p->pid)
+					|| security_task_ctx_migrated())){
+#else
 					!vx_current_initpid(p->pid)) {
+#endif
 				int err = group_send_sig_info(sig, info, p);
 				++count;
 				if (err != -EPERM)
@@ -1391,7 +1399,12 @@ int kill_pid_info(int sig, struct siginfo *info, struct pid *pid)
 		rcu_read_lock();
 		p = pid_task(pid, PIDTYPE_PID);
 		if (p) {
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+			 if (vx_check(vx_task_xid(p), VS_ADMIN | VS_IDENT)
+			     || !security_task_kill_vserver(current, p , sig))
+#else
 			if (vx_check(vx_task_xid(p), VS_IDENT))
+#endif
 				error = group_send_sig_info(sig, info, p);
 			else {
 				rcu_read_unlock();
@@ -1442,7 +1455,11 @@ int kill_pid_info_as_cred(int sig, struct siginfo *info, struct pid *pid,
 
 	rcu_read_lock();
 	p = pid_task(pid, PIDTYPE_PID);
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	if (!p || !vx_check(vx_task_xid(p), VS_ADMIN | VS_IDENT)) {
+#else
 	if (!p || !vx_check(vx_task_xid(p), VS_IDENT)) {
+#endif
 		ret = -ESRCH;
 		goto out_unlock;
 	}

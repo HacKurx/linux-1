@@ -46,6 +46,9 @@ struct iov_iter {
 	};
 };
 
+typedef size_t (*iter_actor_t)(struct page *, unsigned int, unsigned int,
+				struct iov_iter *);
+
 /*
  * Total number of bytes covered by an iovec.
  *

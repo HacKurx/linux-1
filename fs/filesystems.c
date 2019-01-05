@@ -42,6 +42,9 @@ void put_filesystem(struct file_system_type *fs)
 {
 	module_put(fs->owner);
 }
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+EXPORT_SYMBOL(put_filesystem);
+#endif
 
 static struct file_system_type **find_filesystem(const char *name, unsigned len)
 {

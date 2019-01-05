@@ -583,6 +583,9 @@ int vx_migrate_task(struct task_struct *p, struct vx_info *vxi, int unshare)
 {
 	struct vx_info *old_vxi;
 	int ret = 0;
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	struct cred *new = NULL;
+#endif
 
 	if (!p || !vxi)
 		BUG();
@@ -598,9 +601,20 @@ int vx_migrate_task(struct task_struct *p, struct vx_info *vxi, int unshare)
 	if (vx_info_state(vxi, VXS_SHUTDOWN))
 		return -EFAULT;
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	down_read(&security_sem);
+#endif
 	old_vxi = task_get_vx_info(p);
 	if (old_vxi == vxi)
 		goto out;
+
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	new = security_task_ctx_migrate(p);
+	if (IS_ERR(new)) {
+		ret = PTR_ERR(new);
+		goto out;
+	}
+#endif
 
 //	if (!(ret = vx_migrate_user(p, vxi))) {
 	{
@@ -657,7 +671,20 @@ int vx_migrate_task(struct task_struct *p, struct vx_info *vxi, int unshare)
 			put_nsproxy(old_nsp);
 		}
 	}
+
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	up_read(&security_sem);
+	ret = commit_creds(new);
+	goto out_put;
+#endif
+
 out:
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	up_read(&security_sem);
+	if (new)
+		abort_creds(new);
+out_put:
+#endif
 	put_vx_info(old_vxi);
 	return ret;
 }

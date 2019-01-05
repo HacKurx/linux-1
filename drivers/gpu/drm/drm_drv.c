@@ -26,6 +26,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+#include <linux/security.h>
+#endif
+
 #include <linux/debugfs.h>
 #include <linux/fs.h>
 #include <linux/module.h>

@@ -1,0 +1,281 @@
+config CLIP_LSM_SUPPORT
+	bool "CLIP LSM support"
+	help
+	  This adds the necessary glue (hooks, ...) to the kernel to
+	  make CLIP-LSM work.
+
+config CLSM_NOSUID_ROOT
+	bool "Ignore root suid bits"
+	depends on CLIP_LSM_SUPPORT
+	help
+	  When this option is set, suid (but not sgid) bits on root-owned
+	  executables will be silently ignored. Suid bits for other users
+	  will be honoured with the usual conditions (no MNT_NOSUID, ...).
+	  This is intented for use with veriexec, to reflect the fact that
+	  it is always more fitting to provide an executable with a select
+	  few root privileges through veriexec, than to grant it full root
+	  privileges and identity through a suid root bit.
+
+menu "CLIP LSM"
+	depends on CLIP_LSM_SUPPORT
+
+config CLIP_LSM
+	bool "CLIP LSM"
+	depends on CLIP_LSM_SUPPORT
+	help
+	  Help yourself...
+
+config CLSM_DEBUG
+	bool "CLIP LSM debug"
+	depends on CLIP_LSM
+	help
+	  Makes CLSM more verbose.
+
+config CLSM_CHROOT
+	bool "Chroot control"
+	depends on CLIP_LSM
+	help
+	  Enforce specific checks on chrooted processes and chroot calls.
+	  Note : chroot status is accounted so that a process in a vserver
+	  context is not chrooted unless it does a chroot call from within
+	  the context (in other words vcontext --chroot --migrate does not
+	  result in a chrooted process in the target context).
+
+config CLSM_CHROOT_DEVEL
+	bool "Relaxed chroot control for development"
+	depends on CLSM_CHROOT
+	help
+	  Makes it possible to disable chroot controls through by setting
+	  the kernel.clip.chroot sysctl var to 0.
+
+config CLSM_CHROOT_OPENDIRS
+	bool "Check for open directories on chroot"
+	depends on CLSM_CHROOT
+	help
+	  Prevent any process from chroot()ing with open directory file
+	  descriptors.
+
+config CLSM_CHROOT_SOCKFD
+	bool "Check file descriptors transmitted through UNIX sockets"
+	depends on CLSM_CHROOT
+	help
+	  Prevent open file descriptors being transmitted trough a UNIX socket
+	  to a chrooted task, when those file descriptors are below the task's
+	  root.
+
+config CLSM_CHROOT_PTRACE
+	bool "Disallow ptrace from chrooted processes"
+	depends on CLSM_CHROOT
+	help
+	  Prevent chrooted processes, even those with CAP_SYS_PTRACE, from
+	  ptracing any process.
+
+config CLSM_CHROOT_GRSEC
+	bool "Enable CLSM info in grsec tests"
+	depends on CLSM_CHROOT
+	help
+	  This option makes the 'task chrooted' information from CLSM available
+	  for Grsecurity chroot hooks, rather than grsec's internal
+	  proc_is_chrooted() test, which does not quite work in a vserver context.
+	  Affected grsec hooks are : GRKERNSEC_CHROOT_UNIX, GRKERNSEC_CHROOT_NICE,
+	  GRKERNSEC_CHROOT_CAPS, GRKERNSEC_CHROOT_FINDTASK, GRKERNSEC_CHROOT_FCHDIR,
+	  GRKERNSEC_CHROOT_SHMAT, GRKERNSEC_CHROOT_EXECLOG, GRKERNSEC_CHROOT_MKNOD,
+	  GRKERNSEC_CHROOT_MOUNT, GRKERNSEC_CHROOT_DOUBLE, GRKERNSEC_CHROOT_PIVOT,
+	  GRKERNSEC_CHROOT_SYSCTL and GKERNSEC_CHROOT_CHMOD, all of which must be
+	  selected separately in the config.
+
+config CLSM_ROOTCAPS
+	bool "Root capability set restriction"
+	depends on CLIP_LSM
+	help
+	  Yep.
+
+config CLSM_ROOTCAPS_DEVEL
+	bool "Relaxed root caps restrictions for developpement"
+	depends on CLSM_ROOTCAPS
+	help
+	  Take it easy, man.
+
+config CLSM_NET
+	bool "CLIP LSM networking hooks"
+	depends on CLIP_LSM
+	select SECURITY_NETWORK
+	help
+	  Restrains non-authorized tasks from accessing the network.
+	  When this option is set, and activated through the
+	  kernel.clip.networking sysctl, only tasks with the 'NETCLIENT'
+	  CLSM privilege will be able to connect() to the network
+	  (through any non-local socket, i.e. AF_UNIX and AF_LOCAL are
+	  still allowed). Conversely, only tasks with the 'NETSERVER'
+	  privilege will be allowed to bind to a network address, and
+	  accept network connections. Relevant checks are also performed
+	  on send/receive operations.
+
+config CLSM_NET_DEVEL
+	bool "Relaxed networking checks for development"
+	depends on CLSM_NET
+	help
+	  Makes it possible to disable the networking checks by zero'ing
+	  the kernel.clip.networking sysctl variable.
+
+config CLSM_MOUNT
+	bool "Control mountable devices"
+	depends on CLIP_LSM
+	help
+	  This option creates a new sysctl, kernel.clip.mount. When that is
+	  set to *zero*, remount operations will be prevented from relaxing
+	  permissions on a VFS mount (e.g. no 'noexec' -> 'exec' transition).
+	  Stricter access control to block devices can additionnally be
+	  obtained through the devctl option below.
+
+config CLSM_MOUNT_DEVEL
+	bool "Relaxed mount checks for development"
+	depends on CLSM_MOUNT
+	help
+	  When this option is set, the clsm mount checks can be switched off
+	  at any time by writing '1' to the kernel.clip.mount sysctl. Otherwise,
+	  they can only be turned on, and never turned off until system halt.
+
+config DEVCTL
+	bool "Block device access control (devctl)"
+	depends on CLSM_MOUNT
+	help
+	  This option creates a new /dev/devctl (major 1, minor 15), through
+	  which a list of entries can be loaded into the kernel. Each entry
+	  matches a range of devices through a major number and a range of
+	  minor numbers, and associates those devices with a permission
+	  bitmask, including bits for read/write access (both through
+	  mounting and by direct block special file access) as well as execute,
+	  device, suid access (for mount options only). Multiple overlapping
+	  device ranges can be loaded, with the overlaps managed through the
+	  priorities affected to each entry : when several entries match, the
+	  one (or *any* one) with the highest priority is used to decide access.
+	  Note that loading/unloading entries is only possible while the
+	  kernel.clip.mount sysctl is set to inactive (i.e. 1).
+
+config DEVCTL_STRICT
+	bool "Stricter block device access control"
+	depends on DEVCTL
+	help
+	  When this option is activated, accesses to devices which do not match
+	  any device entry will be denied when the kernel.clip.mount sysctl is
+	  set to active (i.e. 0). The default is to grant all accesses when a
+	  device doesn't have a specific access control entry attached to it.
+
+config CLSM_FSTRACE
+	bool "Traced mounts (MS_TRACED) support"
+	depends on CLIP_LSM && SECURITY_PATH
+	help
+	  This option adds support for a new mount flag, MS_TRACE, which, when
+	  set on VFS mount, makes the kernel log all file creations on that
+	  mount. Those logs are created at the KERN_INFO level, and include
+	  the name (unless the "Hash file names on traced mounts" option below
+	  is set) of the created file, common name, pid, uid and euid of the
+	  task that created it, and name of the traced mount mountpoint.
+
+config CLSM_FSTRACE_HASH
+	bool "Hash file names on traced mounts"
+	depends on CLSM_FSTRACE
+	select CRYPTO
+	select CRYPTO_MD5
+	help
+	  When this option is set, the file creation logs generated by mounts
+	  bearing the MS_TRACE flag will not include the names of created
+	  files, but rather MD5 hashes of those names. This way, an auditor
+	  looking for a specific file will still be able to find it in the
+	  trace, but an attacker who gains access to the log won't get too
+	  much information about file activities on the system.
+
+menu "Verified execution (veriexec)"
+	depends on CLIP_LSM
+
+config VERIEXEC
+	bool "Verify executable fingerprints"
+	select CRYPTO
+	select SECURITY
+	select SECURITY_CAPABILITIES
+	help
+	  Avast ! Pirates beware ! No more lootin' & plunderin' of executables !
+
+config VERIEXEC_CACHE
+	bool "Cache verification results"
+	depends on VERIEXEC
+	help
+	  Cache the verification successes in inode structures, as long as
+	  those structs are kept in the inode cache and not opened for
+	  writing.
+
+config VERIEXEC_MNTSUID
+	bool "Enforce nosuid mount option in veriexec"
+	depends on VERIEXEC
+	help
+	  If this option is selected, veriexec will not grant any
+	  privileges when a file is executed from a nosuid VFS mount.
+
+config VERIEXEC_DEBUG
+	bool "Veriexec debug"
+	depends on VERIEXEC
+	help
+	  Ah. The scream of a panic'ing kernel on a moonless night...
+
+config VERIEXEC_DEBUG_EXTRA
+	bool "More Veriexec debug"
+	depends on VERIEXEC_DEBUG
+	help
+	  Printk frenzy. Use with moderation.
+
+config VERIEXEC_DEBUG_MEMLEAK
+	bool "Trace veriexec memory usage"
+	depends on VERIEXEC_DEBUG
+	help
+	  Keep stats on veriexec memory allocation, to track
+	  possible memory leaks. The number of currently allocated
+	  entries can then be obtained with the VERIEXEC_IO_MEMCHK
+	  ioctl.
+
+config VERIEXEC_HASH_BITS
+        int "Veriexec hash bits"
+	depends on VERIEXEC
+	range 4 10
+	default "8"
+	help
+	  Number of hash bits for hashed list store.
+
+
+menu "Veriexec digest algorithms"
+	depends on VERIEXEC
+
+config VERIEXEC_DIG_MD5
+	bool "MD5 digests"
+	select CRYPTO_MD5
+	default y
+	help
+	  A lousy but cheap digest algorithm.
+
+config VERIEXEC_DIG_SHA1
+	bool "SHA1 digests"
+	select CRYPTO_SHA1
+	default y
+	help
+	  Another, slightly less lousy, digest algorithm.
+
+config VERIEXEC_DIG_SHA256
+	bool "SHA256 digests"
+	select CRYPTO_SHA256
+	default y
+	help
+	  This one is not so lousy at the moment.
+
+config VERIEXEC_DIG_CCSD
+	bool "CCSD digests"
+	depends on CRYPTO_CCSD
+	default y
+	help
+	  Now, this one is supposedly quite good.
+
+endmenu
+
+endmenu
+
+endmenu
+

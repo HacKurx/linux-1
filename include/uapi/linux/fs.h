@@ -112,6 +112,11 @@ struct inodes_stat_t {
 #define MS_REMOUNT	32	/* Alter flags of a mounted FS */
 #define MS_MANDLOCK	64	/* Allow mandatory locks on an FS */
 #define MS_DIRSYNC	128	/* Directory modifications are synchronous */
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+#define MS_NOSYMFOLLOW	256	/* Do not follow symlinks on mount */
+#define MS_NOLOCK	512	/* Do not allow file lock creation */
+#define MS_TRACE	(1<<26)	/* Trace file creation */
+#endif
 #define MS_NOATIME	1024	/* Do not update access times. */
 #define MS_NODIRATIME	2048	/* Do not update directory access times */
 #define MS_BIND		4096

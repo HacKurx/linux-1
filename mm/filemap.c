@@ -1674,8 +1674,19 @@ static void shrink_readahead_size_eio(struct file *filp,
  * This is really ugly. But the goto's actually try to clarify some
  * of the logic when it comes to error handling etc.
  */
-static ssize_t do_generic_file_read(struct file *filp, loff_t *ppos,
+
+/**
+ * CLIP: we need a function that allows us to customize the file read
+ * actor function.
+ */
+#ifndef CONFIG_CLIP_LSM_SUPPORT
+static
+ssize_t do_generic_file_read(struct file *filp, loff_t *ppos,
 		struct iov_iter *iter, ssize_t written)
+#else
+ssize_t do_actor_file_read(struct file *filp, loff_t *ppos,
+		struct iov_iter *iter, ssize_t written, iter_actor_t actor)
+#endif
 {
 	struct address_space *mapping = filp->f_mapping;
 	struct inode *inode = mapping->host;
@@ -1798,9 +1809,15 @@ page_ok:
 		/*
 		 * Ok, we have the page, and it's up-to-date, so
 		 * now we can copy it to user space...
+		 * The default actor (copy_page_to_iter) will copy the page to
+		 * userspace. A custom actor is used for veriexec.
 		 */
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+		ret = actor(page, offset, nr, iter);
+#else
 		ret = copy_page_to_iter(page, offset, nr, iter);
+#endif
 		offset += ret;
 		index += offset >> PAGE_SHIFT;
 		offset &= ~PAGE_MASK;
@@ -1915,6 +1932,17 @@ out:
 	file_accessed(filp);
 	return written ? written : error;
 }
+
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+EXPORT_SYMBOL(do_actor_file_read);
+
+static ssize_t do_generic_file_read(struct file *filp, loff_t *ppos,
+		struct iov_iter *iter, ssize_t written)
+{
+	return do_actor_file_read(filp, ppos, iter, written, copy_page_to_iter);
+}
+#endif
+
 
 /**
  * generic_file_read_iter - generic filesystem read routine

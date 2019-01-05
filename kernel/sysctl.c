@@ -2573,6 +2573,59 @@ static int proc_dostring_coredump(struct ctl_table *table, int write,
 }
 #endif
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+
+#define OP_SET	0
+#define OP_AND	1
+#define OP_OR	2
+
+static int do_proc_dointvec_bset_conv(bool *negp, unsigned long *lvalp,
+				      int *valp,
+				      int write, void *data)
+{
+	int op = *(int *)data;
+	if (write) {
+		int val = *negp ? -*lvalp : *lvalp;
+		switch(op) {
+		case OP_SET:	*valp = val; break;
+		case OP_AND:	*valp &= val; break;
+		case OP_OR:	*valp |= val; break;
+		}
+	} else {
+		int val = *valp;
+		if (val < 0) {
+			*negp = true;
+			*lvalp = (unsigned long)-val;
+		} else {
+			*negp = false;
+			*lvalp = (unsigned long)val;
+		}
+	}
+	return 0;
+}
+
+/*
+ *	init may raise the set.
+ */
+
+int proc_dointvec_bset(struct ctl_table *table, int write,
+		void __user *buffer, size_t *lenp, loff_t *ppos)
+{
+	int op;
+
+	if (write && !capable(CAP_SYS_MODULE)) {
+		return -EPERM;
+	}
+
+	op = is_global_init(current) ? OP_SET : OP_AND;
+	return do_proc_dointvec(table, write, buffer, lenp, ppos,
+				do_proc_dointvec_bset_conv,&op);
+}
+
+EXPORT_SYMBOL(proc_dointvec_bset);
+#endif /* CONFIG_CLIP_LSM */
+
+
 static int __do_proc_doulongvec_minmax(void *data, struct ctl_table *table, int write,
 				     void __user *buffer,
 				     size_t *lenp, loff_t *ppos,

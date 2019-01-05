@@ -624,6 +624,9 @@ error:
 
 	return -ENOMEM;
 }
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+EXPORT_SYMBOL(__vm_enough_memory);
+#endif
 
 /**
  * get_cmdline() - copy the cmdline value to a buffer.

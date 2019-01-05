@@ -257,9 +257,9 @@ static int proc_maps_open(struct inode *inode, struct file *file,
 
 	priv->inode = inode;
 #ifdef CONFIG_GRKERNSEC_PROC_MEMMAP
-	priv->mm = proc_mem_open(inode, PTRACE_MODE_READ, &priv->ptracer_exec_id);
+	priv->mm = proc_mem_open(inode, PTRACE_MODE_READ | PTRACE_MODE_PROCFD, &priv->ptracer_exec_id);
 #else
-	priv->mm = proc_mem_open(inode, PTRACE_MODE_READ, NULL);
+	priv->mm = proc_mem_open(inode, PTRACE_MODE_READ | PTRACE_MODE_PROCFD, NULL);
 #endif
 	if (IS_ERR(priv->mm)) {
 		int err = PTR_ERR(priv->mm);
@@ -1495,7 +1495,7 @@ static int pagemap_open(struct inode *inode, struct file *file)
 {
 	struct mm_struct *mm;
 
-	mm = proc_mem_open(inode, PTRACE_MODE_READ, NULL);
+	mm = proc_mem_open(inode, PTRACE_MODE_READ | PTRACE_MODE_PROCFD, NULL);
 	if (IS_ERR(mm))
 		return PTR_ERR(mm);
 	file->private_data = mm;

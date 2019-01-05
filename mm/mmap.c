@@ -1855,6 +1855,13 @@ unsigned long mmap_region(struct file *file, unsigned long addr,
 		 * new file must not have been exposed to user-space, yet.
 		 */
 		vma->vm_file = get_file(file);
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+		if (vm_flags & VM_EXEC) {
+			error = security_file_map_exec(vma);
+			if (error)
+				goto free_vma;
+		}
+#endif
 		error = file->f_op->mmap(file, vma);
 		if (error)
 			goto unmap_and_free_vma;

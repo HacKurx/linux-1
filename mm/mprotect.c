@@ -477,6 +477,17 @@ mprotect_fixup(struct vm_area_struct *vma, struct vm_area_struct **pprev,
 	}
 
 success:
+
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	if (vma->vm_file && (newflags & VM_EXEC)) {
+		error = security_file_map_exec(vma);
+		/* map_exec() may add DENYWRITE to the mapping */
+		if (!(oldflags & VM_DENYWRITE) &&
+				(vma->vm_flags & VM_DENYWRITE))
+			newflags |= VM_DENYWRITE;
+	}
+#endif
+
 	/*
 	 * vm_flags and vm_page_prot are protected by the mmap_sem
 	 * held in write mode.

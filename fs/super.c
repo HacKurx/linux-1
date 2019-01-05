@@ -40,7 +40,13 @@
 
 
 static LIST_HEAD(super_blocks);
+// FIXME/CLIP: Keep sb_lock as static or add functions to take/release?
+#ifndef CONFIG_CLIP_LSM_SUPPORT
 static DEFINE_SPINLOCK(sb_lock);
+#else
+DEFINE_SPINLOCK(sb_lock);
+EXPORT_SYMBOL(sb_lock);
+#endif
 
 static char *sb_writers_name[SB_FREEZE_LEVELS] = {
 	"sb_writers",
@@ -269,13 +275,19 @@ fail:
 /*
  * Drop a superblock's refcount.  The caller must hold sb_lock.
  */
-static void __put_super(struct super_block *sb)
+#ifndef CONFIG_CLIP_LSM_SUPPORT
+static
+#endif
+void __put_super(struct super_block *sb)
 {
 	if (!--sb->s_count) {
 		list_del_init(&sb->s_list);
 		destroy_super(sb);
 	}
 }
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+EXPORT_SYMBOL(__put_super);
+#endif
 
 /**
  *	put_super	-	drop a temporary reference to superblock
@@ -762,6 +774,9 @@ rescan:
 	spin_unlock(&sb_lock);
 	return NULL;
 }
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+EXPORT_SYMBOL(user_get_super);
+#endif
 
 /**
  *	do_remount_sb - asks filesystem to change mount options.
@@ -1200,10 +1215,17 @@ mount_fs(struct file_system_type *type, int flags, const char *name, void *data)
 	sb->s_flags |= MS_BORN;
 
 	error = -EPERM;
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	if (!sb->s_bdev &&
+		(sb->s_magic != PROC_SUPER_MAGIC) &&
+		(sb->s_magic != DEVPTS_SUPER_MAGIC) &&
+		security_sb_mount_permission(SECURITY_MOUNT_BINARY, NULL))
+#else
 	if (!vx_capable(CAP_SYS_ADMIN, VXC_BINARY_MOUNT) &&
 		!sb->s_bdev &&
 		(sb->s_magic != PROC_SUPER_MAGIC) &&
 		(sb->s_magic != DEVPTS_SUPER_MAGIC))
+#endif
 		goto out_sb;
 
 	error = security_sb_kern_mount(sb, flags, secdata);

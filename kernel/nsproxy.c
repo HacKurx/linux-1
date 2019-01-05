@@ -28,6 +28,9 @@
 #include <linux/file.h>
 #include <linux/syscalls.h>
 #include <linux/cgroup.h>
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+#include <linux/security.h>
+#endif
 #include "../fs/mount.h"
 
 static struct kmem_cache *nsproxy_cachep;
@@ -194,7 +197,11 @@ int copy_namespaces(unsigned long flags, struct task_struct *tsk)
 		return 0;
 	}
 
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	if (security_task_unshare_ns(flags))
+#else
 	if (!vx_ns_can_unshare(user_ns, CAP_SYS_ADMIN, flags))
+#endif
 		return -EPERM;
 
 	/*
@@ -255,7 +262,11 @@ int unshare_nsproxy_namespaces(unsigned long unshare_flags,
 		return 0;
 
 	user_ns = new_cred ? new_cred->user_ns : current_user_ns();
+#ifdef CONFIG_CLIP_LSM_SUPPORT
+	if (security_task_unshare_ns(unshare_flags))
+#else
 	if (!vx_ns_can_unshare(user_ns, CAP_SYS_ADMIN, unshare_flags))
+#endif
 		return -EPERM;
 
 	*new_nsp = create_new_namespaces(unshare_flags, current, user_ns,
