@@ -22,6 +22,7 @@
 #include <linux/uio.h>
 #include <crypto/hash.h>
 #include <asm/highmem.h>
+#include <linux/highmem.h>
 
 /*************************************************************/
 /*                     Hash mapping                          */

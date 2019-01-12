@@ -12,6 +12,7 @@
 #include <asm/uaccess.h>
 #include "internal.h"
 #include "mount.h"
+#include <linux/security.h>
 
 static long do_sys_name_to_handle(struct path *path,
 				  struct file_handle __user *ufh,
