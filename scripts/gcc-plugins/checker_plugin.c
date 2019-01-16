@@ -19,11 +19,11 @@
 #include "gcc-common.h"
 
 extern void c_register_addr_space (const char *str, addr_space_t as);
-extern enum machine_mode default_addr_space_pointer_mode (addr_space_t);
-extern enum machine_mode default_addr_space_address_mode (addr_space_t);
-extern bool default_addr_space_valid_pointer_mode(enum machine_mode mode, addr_space_t as);
-extern bool default_addr_space_legitimate_address_p(enum machine_mode mode, rtx mem, bool strict, addr_space_t as);
-extern rtx default_addr_space_legitimize_address(rtx x, rtx oldx, enum machine_mode mode, addr_space_t as);
+extern SCALAR_INT_MODE default_addr_space_pointer_mode (addr_space_t);
+extern SCALAR_INT_MODE default_addr_space_address_mode (addr_space_t);
+extern bool default_addr_space_valid_pointer_mode(SCALAR_INT_MODE mode, addr_space_t as);
+extern bool default_addr_space_legitimate_address_p(MACHINE_MODE mode, rtx mem, bool strict, addr_space_t as);
+extern rtx default_addr_space_legitimize_address(rtx x, rtx oldx, MACHINE_MODE mode, addr_space_t as);
 
 __visible int plugin_is_GPL_compatible;
 
@@ -44,27 +44,27 @@ static struct plugin_info checker_plugin_info = {
 #define ADDR_SPACE_RCU			0
 #define ADDR_SPACE_FORCE_RCU		0
 
-static enum machine_mode checker_addr_space_pointer_mode(addr_space_t addrspace)
+static SCALAR_INT_MODE checker_addr_space_pointer_mode(addr_space_t addrspace)
 {
 	return default_addr_space_pointer_mode(ADDR_SPACE_GENERIC);
 }
 
-static enum machine_mode checker_addr_space_address_mode(addr_space_t addrspace)
+static SCALAR_INT_MODE checker_addr_space_address_mode(addr_space_t addrspace)
 {
 	return default_addr_space_address_mode(ADDR_SPACE_GENERIC);
 }
 
-static bool checker_addr_space_valid_pointer_mode(enum machine_mode mode, addr_space_t as)
+static bool checker_addr_space_valid_pointer_mode(SCALAR_INT_MODE mode, addr_space_t as)
 {
 	return default_addr_space_valid_pointer_mode(mode, as);
 }
 
-static bool checker_addr_space_legitimate_address_p(enum machine_mode mode, rtx mem, bool strict, addr_space_t as)
+static bool checker_addr_space_legitimate_address_p(MACHINE_MODE mode, rtx mem, bool strict, addr_space_t as)
 {
 	return default_addr_space_legitimate_address_p(mode, mem, strict, ADDR_SPACE_GENERIC);
 }
 
-static rtx checker_addr_space_legitimize_address(rtx x, rtx oldx, enum machine_mode mode, addr_space_t as)
+static rtx checker_addr_space_legitimize_address(rtx x, rtx oldx, MACHINE_MODE mode, addr_space_t as)
 {
 	return default_addr_space_legitimize_address(x, oldx, mode, as);
 }
@@ -173,21 +173,19 @@ static tree handle_context_attribute(tree *node, tree name, tree args, int flags
 	return NULL_TREE;
 }
 
-static struct attribute_spec context_attr = {
-	.name			= "context",
-	.min_length		= 2,
-	.max_length		= 3,
-	.decl_required		= true,
-	.type_required		= false,
-	.function_type_required	= false,
-	.handler		= handle_context_attribute,
-#if BUILDING_GCC_VERSION >= 4007
-	.affects_type_identity	= true
-#endif
-};
+static struct attribute_spec context_attr = { };
 
 static void register_attributes(void *event_data, void *data)
 {
+	context_attr.name			= "context";
+	context_attr.min_length		= 2;
+	context_attr.max_length		= 3;
+	context_attr.decl_required	= true;
+	context_attr.handler		= handle_context_attribute;
+#if BUILDING_GCC_VERSION >= 4007
+	context_attr.affects_type_identity	= true;
+#endif
+
 	register_attribute(&context_attr);
 }
 
@@ -280,7 +278,7 @@ static basic_block verify_context_before(gimple_stmt_iterator *gsi, tree context
 	cond_bb = e->src;
 	join_bb = e->dest;
 	e->flags = EDGE_FALSE_VALUE;
-	e->probability = REG_BR_PROB_BASE;
+	e->probability = probability(REG_BR_PROB_BASE);
 
 	true_bb = create_empty_bb(EXIT_BLOCK_PTR_FOR_FN(cfun)->prev_bb);
 	make_edge(cond_bb, true_bb, EDGE_TRUE_VALUE);
@@ -418,6 +416,8 @@ static unsigned int context_execute(void)
 
 	free_dominance_info(CDI_DOMINATORS);
 	free_dominance_info(CDI_POST_DOMINATORS);
+	//if (current_loops)
+	//	loops_state_set(LOOPS_NEED_FIXUP);
 	loop_optimizer_finalize();
 	return 0;
 }

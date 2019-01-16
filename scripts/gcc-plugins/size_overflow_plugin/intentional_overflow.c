@@ -535,16 +535,16 @@ static bool is_lt_signed_type_max(const_tree rhs)
 		return true;
 
 	switch (TYPE_MODE(type)) {
-	case QImode:
+	case E_QImode:
 		new_type = intQI_type_node;
 		break;
-	case HImode:
+	case E_HImode:
 		new_type = intHI_type_node;
 		break;
-	case SImode:
+	case E_SImode:
 		new_type = intSI_type_node;
 		break;
-	case DImode:
+	case E_DImode:
 		new_type = intDI_type_node;
 		break;
 	default:
@@ -628,6 +628,33 @@ tree handle_intentional_overflow(interesting_stmts_t expand_from, bool check_ove
 	return create_assign(expand_from->visited, stmt, lhs, AFTER_STMT);
 }
 
+static bool compare_bitsize_le(machine_mode arg1, machine_mode arg2)
+{
+#if BUILDING_GCC_VERSION >= 8000
+	return maybe_le(GET_MODE_BITSIZE(arg1), GET_MODE_BITSIZE(arg2));
+#else
+	return (GET_MODE_BITSIZE(arg1) <= GET_MODE_BITSIZE(arg2));
+#endif
+}
+
+static bool compare_bitsize_ge(machine_mode arg1, machine_mode arg2)
+{
+#if BUILDING_GCC_VERSION >= 8000
+	return maybe_ge(GET_MODE_BITSIZE(arg1), GET_MODE_BITSIZE(arg2));
+#else
+	return (GET_MODE_BITSIZE(arg1) >= GET_MODE_BITSIZE(arg2));
+#endif
+}
+
+static bool compare_bitsize_ne(machine_mode arg1, machine_mode arg2)
+{
+#if BUILDING_GCC_VERSION >= 8000
+	return maybe_ne(GET_MODE_BITSIZE(arg1), GET_MODE_BITSIZE(arg2));
+#else
+	return (GET_MODE_BITSIZE(arg1) != GET_MODE_BITSIZE(arg2));
+#endif
+}
+
 static bool is_subtraction_special(struct visited *visited, const gassign *stmt)
 {
 	gimple rhs1_def_stmt, rhs2_def_stmt;
@@ -657,9 +684,9 @@ static bool is_subtraction_special(struct visited *visited, const gassign *stmt)
 	rhs2_def_stmt_rhs1_mode = TYPE_MODE(TREE_TYPE(rhs2_def_stmt_rhs1));
 	rhs1_def_stmt_lhs_mode = TYPE_MODE(TREE_TYPE(rhs1_def_stmt_lhs));
 	rhs2_def_stmt_lhs_mode = TYPE_MODE(TREE_TYPE(rhs2_def_stmt_lhs));
-	if (GET_MODE_BITSIZE(rhs1_def_stmt_rhs1_mode) <= GET_MODE_BITSIZE(rhs1_def_stmt_lhs_mode))
+	if (compare_bitsize_le(rhs1_def_stmt_rhs1_mode, rhs1_def_stmt_lhs_mode))
 		return false;
-	if (GET_MODE_BITSIZE(rhs2_def_stmt_rhs1_mode) <= GET_MODE_BITSIZE(rhs2_def_stmt_lhs_mode))
+	if (compare_bitsize_le(rhs2_def_stmt_rhs1_mode, rhs2_def_stmt_lhs_mode))
 		return false;
 
 	pointer_set_insert(visited->no_cast_check, rhs1_def_stmt);
@@ -922,7 +949,7 @@ void unsigned_signed_cast_intentional_overflow(struct visited *visited, gassign 
 
 	if (!(TYPE_UNSIGNED(rhs_type) && !TYPE_UNSIGNED(lhs_type)))
 		return;
-	if (GET_MODE_BITSIZE(TYPE_MODE(rhs_type)) != GET_MODE_BITSIZE(TYPE_MODE(lhs_type)))
+	if (compare_bitsize_ne(TYPE_MODE(rhs_type), TYPE_MODE(lhs_type)))
 		return;
 	use_num = uses_num(rhs);
 	if (use_num != 1)
@@ -971,7 +998,7 @@ static bool is_short_cast_neg(const_tree rhs)
 		return false;
 
 	cast_rhs = gimple_assign_rhs1(cast_stmt);
-	if (GET_MODE_BITSIZE(TYPE_MODE(TREE_TYPE(cast_rhs))) >= GET_MODE_BITSIZE(TYPE_MODE(TREE_TYPE(rhs))))
+	if (compare_bitsize_ge(TYPE_MODE(TREE_TYPE(cast_rhs)), TYPE_MODE(TREE_TYPE(rhs))))
 		return false;
 
 	neg_cast_stmt = get_def_stmt(cast_rhs);
@@ -1013,7 +1040,7 @@ bool neg_short_add_intentional_overflow(gassign *unary_stmt)
 	if (!cast_stmt || !gimple_assign_cast_p(cast_stmt))
 		return false;
 	cast_rhs = gimple_assign_rhs1(cast_stmt);
-	if (GET_MODE_BITSIZE(TYPE_MODE(TREE_TYPE(cast_rhs))) <= GET_MODE_BITSIZE(TYPE_MODE(TREE_TYPE(rhs1))))
+	if (compare_bitsize_le(TYPE_MODE(TREE_TYPE(cast_rhs)), TYPE_MODE(TREE_TYPE(rhs1))))
 		return false;
 
 	// one or two plus expressions

@@ -126,34 +126,24 @@ static tree handle_intentional_overflow_attribute(tree *node, tree __unused name
 	return NULL_TREE;
 }
 
-static struct attribute_spec size_overflow_attr = {
-	.name				= "size_overflow",
-	.min_length			= 1,
-	.max_length			= -1,
-	.decl_required			= true,
-	.type_required			= false,
-	.function_type_required		= false,
-	.handler			= handle_size_overflow_attribute,
-#if BUILDING_GCC_VERSION >= 4007
-	.affects_type_identity		= false
-#endif
-};
+static struct attribute_spec size_overflow_attr = { };
 
-static struct attribute_spec intentional_overflow_attr = {
-	.name				= "intentional_overflow",
-	.min_length			= 1,
-	.max_length			= -1,
-	.decl_required			= true,
-	.type_required			= false,
-	.function_type_required		= false,
-	.handler			= handle_intentional_overflow_attribute,
-#if BUILDING_GCC_VERSION >= 4007
-	.affects_type_identity		= false
-#endif
-};
+static struct attribute_spec intentional_overflow_attr = { };
 
 static void register_attributes(void __unused *event_data, void __unused *data)
 {
+	size_overflow_attr.name				= "size_overflow";
+	size_overflow_attr.min_length		= 1;
+	size_overflow_attr.max_length		= -1;
+	size_overflow_attr.decl_required	= true;
+	size_overflow_attr.handler			= handle_size_overflow_attribute;
+
+	intentional_overflow_attr.name			= "intentional_overflow";
+	intentional_overflow_attr.min_length	= 1;
+	intentional_overflow_attr.max_length	= -1;
+	intentional_overflow_attr.decl_required	= true;
+	intentional_overflow_attr.handler		= handle_intentional_overflow_attribute;
+
 	register_attribute(&size_overflow_attr);
 	register_attribute(&intentional_overflow_attr);
 }

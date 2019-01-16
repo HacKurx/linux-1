@@ -41,6 +41,10 @@
 
 #include "params.h"
 
+#if BUILDING_GCC_VERSION >= 8000
+#include "stringpool.h"
+#endif
+
 #if BUILDING_GCC_VERSION <= 4009
 #include "pointer-set.h"
 #else
@@ -105,6 +109,7 @@
 #include "ipa-utils.h"
 
 #if BUILDING_GCC_VERSION >= 4009
+#include "stringpool.h"
 #include "attribs.h"
 #include "varasm.h"
 #include "stor-layout.h"
@@ -115,7 +120,6 @@
 #include "context.h"
 #include "tree-ssa-alias.h"
 #include "tree-ssa.h"
-#include "stringpool.h"
 #if BUILDING_GCC_VERSION >= 7000
 #include "tree-vrp.h"
 #endif
@@ -428,13 +432,6 @@ static inline struct cgraph_node *cgraph_alias_target(struct cgraph_node *n)
 {
 	return cgraph_alias_aliased_node(n);
 }
-#endif
-
-#if BUILDING_GCC_VERSION >= 4007 && BUILDING_GCC_VERSION <= 4009
-#define cgraph_create_edge(caller, callee, call_stmt, count, freq, nest) \
-	cgraph_create_edge((caller), (callee), (call_stmt), (count), (freq))
-#define cgraph_create_edge_including_clones(caller, callee, old_call_stmt, call_stmt, count, freq, nest, reason) \
-	cgraph_create_edge_including_clones((caller), (callee), (old_call_stmt), (call_stmt), (count), (freq), (reason))
 #endif
 
 #if BUILDING_GCC_VERSION <= 4008
@@ -785,10 +782,23 @@ static inline const char *get_decl_section_name(const_tree decl)
 #define varpool_get_node(decl) varpool_node::get(decl)
 #define dump_varpool_node(file, node) (node)->dump(file)
 
-#define cgraph_create_edge(caller, callee, call_stmt, count, freq, nest) \
+#if BUILDING_GCC_VERSION >= 8000
+#define cgraph_create_edge(caller, callee, call_stmt, count, freq) \
+	(caller)->create_edge((callee), (call_stmt), (count))
+
+#define cgraph_create_edge_including_clones(caller, callee,	\
+		old_call_stmt, call_stmt, count, freq, reason)	\
+	(caller)->create_edge_including_clones((callee),	\
+		(old_call_stmt), (call_stmt), (count), (reason))
+#else
+#define cgraph_create_edge(caller, callee, call_stmt, count, freq) \
 	(caller)->create_edge((callee), (call_stmt), (count), (freq))
-#define cgraph_create_edge_including_clones(caller, callee, old_call_stmt, call_stmt, count, freq, nest, reason) \
-	(caller)->create_edge_including_clones((callee), (old_call_stmt), (call_stmt), (count), (freq), (reason))
+
+#define cgraph_create_edge_including_clones(caller, callee,	\
+		old_call_stmt, call_stmt, count, freq, reason)	\
+	(caller)->create_edge_including_clones((callee),	\
+		(old_call_stmt), (call_stmt), (count), (freq), (reason))
+#endif
 
 typedef struct cgraph_node *cgraph_node_ptr;
 typedef struct cgraph_edge *cgraph_edge_p;
@@ -1023,6 +1033,39 @@ static inline void debug_gimple_stmt(const_gimple s)
 #if BUILDING_GCC_VERSION >= 7000
 #define get_inner_reference(exp, pbitsize, pbitpos, poffset, pmode, punsignedp, preversep, pvolatilep, keep_aligning)	\
 	get_inner_reference(exp, pbitsize, pbitpos, poffset, pmode, punsignedp, preversep, pvolatilep)
+#endif
+
+#if BUILDING_GCC_VERSION < 8000
+#define E_HImode HImode
+#define E_SImode SImode
+#define E_DImode DImode
+#define E_TImode TImode
+#define E_QImode QImode
+#endif
+
+#if BUILDING_GCC_VERSION < 5000
+#define SCALAR_INT_MODE	enum machine_mode
+#define MACHINE_MODE	enum machine_mode
+#elif BUILDING_GCC_VERSION < 8000
+#define SCALAR_INT_MODE	machine_mode
+#define MACHINE_MODE	machine_mode
+#else
+#define SCALAR_INT_MODE	scalar_int_mode
+#define MACHINE_MODE	machine_mode
+#endif
+
+#if BUILDING_GCC_VERSION >= 8000
+#define empty_string	""
+
+static inline profile_probability probability(int prob)
+{
+	return profile_probability::from_reg_br_prob_base(prob);
+}
+#else
+static inline int probability(int prob)
+{
+	return prob;
+}
 #endif
 
 #endif

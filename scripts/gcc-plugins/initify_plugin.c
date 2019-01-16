@@ -360,7 +360,7 @@ static struct attribute_spec nocapture_attr = {
 	.type_required			= false,
 	.function_type_required		= false,
 	.handler			= handle_nocapture_attribute,
-#if BUILDING_GCC_VERSION >= 4007
+#if BUILDING_GCC_VERSION >= 4007 && BUILDING_GCC_VERSION < 8000
 	.affects_type_identity		= false
 #endif
 };
@@ -373,7 +373,7 @@ static struct attribute_spec unverified_nocapture_attr = {
 	.type_required			= false,
 	.function_type_required		= false,
 	.handler			= handle_unverified_nocapture_attribute,
-#if BUILDING_GCC_VERSION >= 4007
+#if BUILDING_GCC_VERSION >= 4007 && BUILDING_GCC_VERSION < 8000
 	.affects_type_identity		= false
 #endif
 };

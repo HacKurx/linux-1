@@ -109,7 +109,7 @@ static void check_retaddr(gimple_stmt_iterator *gsi, tree new_retaddr)
 	cond_bb = e->src;
 	join_bb = e->dest;
 	e->flags = EDGE_FALSE_VALUE;
-	e->probability = REG_BR_PROB_BASE;
+	e->probability = probability(REG_BR_PROB_BASE);
 
 	true_bb = create_empty_bb(join_bb);
 	make_edge(cond_bb, true_bb, EDGE_TRUE_VALUE | EDGE_PRESERVE);
@@ -122,21 +122,6 @@ static void check_retaddr(gimple_stmt_iterator *gsi, tree new_retaddr)
 
 	// insert call to builtin_trap or rap_abort_ret
 	*gsi = gsi_start_bb(true_bb);
-
-	if (report_runtime) {
-		VEC(tree, gc) *inputs = NULL;
-		tree input;
-
-		// build the equivalence of asm volatile ("" : : "cx"(__builtin_return_address(0)));
-		input = build_tree_list(NULL_TREE, build_const_char_string(3, "cx"));
-		input = chainon(NULL_TREE, build_tree_list(input, new_retaddr));
-		VEC_safe_push(tree, gc, inputs, input);
-
-		stmt = gimple_build_asm_vec("", inputs, NULL, NULL, NULL);
-		gimple_asm_set_volatile(as_a_gasm(stmt), true);
-		gimple_set_location(stmt, loc);
-		gsi_insert_after(gsi, stmt, GSI_CONTINUE_LINKING);
-	}
 
 	if (rap_abort_ret) {
 		stmt = gimple_build_asm_vec(rap_abort_ret, NULL, NULL, NULL, NULL);
@@ -182,6 +167,8 @@ static unsigned int rap_ret_execute(void)
 
 	free_dominance_info(CDI_DOMINATORS);
 	free_dominance_info(CDI_POST_DOMINATORS);
+	if (current_loops)
+		loops_state_set(LOOPS_NEED_FIXUP);
 	loop_optimizer_finalize();
 	return 0;
 }
@@ -342,9 +329,11 @@ static unsigned int rap_mark_retloc_execute(void)
 
 		emit_label_before(label1, insn);
 		LABEL_NUSES(label1)++;
+#if BUILDING_GCC_VERSION >= 4007 && BUILDING_GCC_VERSION < 8000
 		do {
 			insn = NEXT_INSN(insn);
 		} while (GET_CODE(insn) == NOTE && NOTE_KIND(insn) == NOTE_INSN_CALL_ARG_LOCATION);
+#endif
 		emit_label_before(label2, insn);
 		LABEL_NUSES(label2)++;
 	}

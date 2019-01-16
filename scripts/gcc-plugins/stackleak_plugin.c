@@ -55,7 +55,7 @@ static void stackleak_check_alloca(gimple_stmt_iterator *gsi)
 	node = cgraph_get_create_node(check_function_decl);
 	gcc_assert(node);
 	frequency = compute_call_stmt_bb_frequency(current_function_decl, bb);
-	cgraph_create_edge(cgraph_get_node(current_function_decl), node, check_alloca, bb->count, frequency, bb->loop_depth);
+	cgraph_create_edge(cgraph_get_node(current_function_decl), node, check_alloca, bb->count, frequency);
 }
 
 static void stackleak_add_instrumentation(gimple_stmt_iterator *gsi, bool after)
@@ -79,7 +79,7 @@ static void stackleak_add_instrumentation(gimple_stmt_iterator *gsi, bool after)
 	node = cgraph_get_create_node(track_function_decl);
 	gcc_assert(node);
 	frequency = compute_call_stmt_bb_frequency(current_function_decl, bb);
-	cgraph_create_edge(cgraph_get_node(current_function_decl), node, track_stack, bb->count, frequency, bb->loop_depth);
+	cgraph_create_edge(cgraph_get_node(current_function_decl), node, track_stack, bb->count, frequency);
 }
 
 static bool is_alloca(gimple stmt)
@@ -156,6 +156,15 @@ static unsigned int stackleak_tree_instrument_execute(void)
 	return 0;
 }
 
+static bool large_stack_frame(void)
+{
+#if BUILDING_GCC_VERSION >= 8000
+	return maybe_ge(get_frame_size(), track_frame_size);
+#else
+	return (get_frame_size() >= track_frame_size);
+#endif
+}
+
 static unsigned int stackleak_final_execute(void)
 {
 	rtx_insn *insn, *next;
@@ -164,7 +173,7 @@ static unsigned int stackleak_final_execute(void)
 		return 0;
 
 	// keep calls only if function frame is big enough
-	if (get_frame_size() >= track_frame_size)
+	if (large_stack_frame())
 		return 0;
 
 	// 1. find pax_track_stack calls
@@ -190,7 +199,7 @@ static unsigned int stackleak_final_execute(void)
 //		warning(0, "track_frame_size: %d %ld %d", cfun->calls_alloca, get_frame_size(), track_frame_size);
 		// 2. delete call
 		delete_insn_and_edges(insn);
-#if BUILDING_GCC_VERSION >= 4007
+#if BUILDING_GCC_VERSION >= 4007 && BUILDING_GCC_VERSION < 8000
 		if (GET_CODE(next) == NOTE && NOTE_KIND(next) == NOTE_INSN_CALL_ARG_LOCATION) {
 			insn = next;
 			next = NEXT_INSN(insn);

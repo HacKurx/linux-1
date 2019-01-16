@@ -37,20 +37,20 @@ tree get_size_overflow_type(struct visited *visited, const_gimple stmt, const_tr
 		return TREE_TYPE(node);
 
 	switch (TYPE_MODE(type)) {
-	case QImode:
-	case HImode:
+	case E_QImode:
+	case E_HImode:
 		new_type = size_overflow_type_SI;
 		break;
-	case SImode:
+	case E_SImode:
 		new_type = size_overflow_type_DI;
 		break;
-	case DImode:
+	case E_DImode:
 		if (LONG_TYPE_SIZE == GET_MODE_BITSIZE(SImode))
 			new_type = TYPE_UNSIGNED(type) ? unsigned_intDI_type_node : intDI_type_node;
 		else
 			new_type = size_overflow_type_TI;
 		break;
-	case TImode:
+	case E_TImode:
 		gcc_assert(!TYPE_UNSIGNED(type));
 		new_type = size_overflow_type_TI;
 		break;
@@ -487,7 +487,7 @@ static void insert_cond_result(interesting_stmts_t expand_from, basic_block bb_t
 	gcc_assert(report_node);
 	frequency = compute_call_stmt_bb_frequency(current_function_decl, bb_true);
 
-	edge = cgraph_create_edge(get_cnode(current_function_decl), report_node, func_stmt, bb_true->count, frequency, bb_true->loop_depth);
+	edge = cgraph_create_edge(get_cnode(current_function_decl), report_node, func_stmt, bb_true->count, frequency);
 	gcc_assert(edge != NULL);
 }
 
@@ -507,7 +507,7 @@ static void insert_check_size_overflow(interesting_stmts_t expand_from, gimple s
 	cond_bb = e->src;
 	join_bb = e->dest;
 	e->flags = EDGE_FALSE_VALUE;
-	e->probability = REG_BR_PROB_BASE;
+	e->probability = probability(REG_BR_PROB_BASE);
 
 	bb_true = create_empty_bb(cond_bb);
 	make_edge(cond_bb, bb_true, EDGE_TRUE_VALUE);
@@ -631,6 +631,24 @@ static bool handle_unsigned_neg_or_bit_not(interesting_stmts_t expand_from, cons
 	return true;
 }
 
+static bool compare_bitsize_gt(machine_mode arg1, machine_mode arg2)
+{
+#if BUILDING_GCC_VERSION >= 8000
+	return maybe_gt(GET_MODE_BITSIZE(arg1), GET_MODE_BITSIZE(arg2));
+#else
+	return (GET_MODE_BITSIZE(arg1) > GET_MODE_BITSIZE(arg2));
+#endif
+}
+
+static bool compare_bitsize_eq(machine_mode arg1, machine_mode arg2)
+{
+#if BUILDING_GCC_VERSION >= 8000
+	return maybe_eq(GET_MODE_BITSIZE(arg1), GET_MODE_BITSIZE(arg2));
+#else
+	return (GET_MODE_BITSIZE(arg1) == GET_MODE_BITSIZE(arg2));
+#endif
+}
+
 static tree create_cast_overflow_check(interesting_stmts_t expand_from, tree new_rhs1, gassign *stmt)
 {
 	bool cast_lhs, cast_rhs;
@@ -640,8 +658,6 @@ static tree create_cast_overflow_check(interesting_stmts_t expand_from, tree new
 	const_tree rhs_type = TREE_TYPE(rhs);
 	enum machine_mode lhs_mode = TYPE_MODE(lhs_type);
 	enum machine_mode rhs_mode = TYPE_MODE(rhs_type);
-	unsigned int lhs_size = GET_MODE_BITSIZE(lhs_mode);
-	unsigned int rhs_size = GET_MODE_BITSIZE(rhs_mode);
 
 	static bool check_lhs[3][4] = {
 		// ss    su     us     uu
@@ -670,10 +686,10 @@ static tree create_cast_overflow_check(interesting_stmts_t expand_from, tree new
 	if (rhs_mode == SImode && !TYPE_UNSIGNED(rhs_type) && (lhs_mode == HImode || lhs_mode == QImode))
 		return create_assign(expand_from->visited, stmt, lhs, AFTER_STMT);
 
-	if (lhs_size > rhs_size) {
+	if (compare_bitsize_gt(lhs_mode, rhs_mode)) {
 		cast_lhs = check_lhs[0][TYPE_UNSIGNED(rhs_type) + 2 * TYPE_UNSIGNED(lhs_type)];
 		cast_rhs = check_rhs[0][TYPE_UNSIGNED(rhs_type) + 2 * TYPE_UNSIGNED(lhs_type)];
-	} else if (lhs_size == rhs_size) {
+	} else if (compare_bitsize_eq(lhs_mode, rhs_mode)) {
 		cast_lhs = check_lhs[1][TYPE_UNSIGNED(rhs_type) + 2 * TYPE_UNSIGNED(lhs_type)];
 		cast_rhs = check_rhs[1][TYPE_UNSIGNED(rhs_type) + 2 * TYPE_UNSIGNED(lhs_type)];
 	} else {

@@ -48,21 +48,16 @@ static tree handle_user_attribute(tree *node, tree name __unused, tree args __un
 	return NULL_TREE;
 }
 
-static struct attribute_spec user_attr = {
-	.name			= "user",
-	.min_length		= 0,
-	.max_length		= 0,
-	.decl_required		= false,
-	.type_required		= false,
-	.function_type_required	= false,
-	.handler		= handle_user_attribute,
-#if BUILDING_GCC_VERSION >= 4007
-	.affects_type_identity	= true
-#endif
-};
+static struct attribute_spec user_attr = { };
 
 static void register_attributes(void *event_data __unused, void *data __unused)
 {
+	user_attr.name			= "user";
+	user_attr.handler		= handle_user_attribute;
+#if BUILDING_GCC_VERSION >= 4007
+	user_attr.affects_type_identity	= true;
+#endif
+
 	register_attribute(&user_attr);
 //	register_attribute(&force_attr);
 }
