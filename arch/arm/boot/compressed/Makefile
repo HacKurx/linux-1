@@ -25,6 +25,8 @@ endif
 
 GCOV_PROFILE		:= n
 
+GCC_PLUGINS		:= n
+
 #
 # Architecture dependencies
 #

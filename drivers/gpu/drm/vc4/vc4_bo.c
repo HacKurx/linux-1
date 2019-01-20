@@ -677,9 +677,10 @@ void vc4_bo_dec_usecnt(struct vc4_bo *bo)
 	mutex_unlock(&bo->madv_lock);
 }
 
-static void vc4_bo_cache_time_timer(struct timer_list *t)
+static void vc4_bo_cache_time_timer(unsigned long data)
 {
-	struct vc4_dev *vc4 = from_timer(vc4, t, bo_cache.time_timer);
+	struct drm_device *dev = (struct drm_device *)data;
+	struct vc4_dev *vc4 = to_vc4_dev(dev);
 
 	schedule_work(&vc4->bo_cache.time_work);
 }
@@ -1041,7 +1042,9 @@ int vc4_bo_cache_init(struct drm_device *dev)
 	INIT_LIST_HEAD(&vc4->bo_cache.time_list);
 
 	INIT_WORK(&vc4->bo_cache.time_work, vc4_bo_cache_time_work);
-	timer_setup(&vc4->bo_cache.time_timer, vc4_bo_cache_time_timer, 0);
+	setup_timer(&vc4->bo_cache.time_timer,
+		    vc4_bo_cache_time_timer,
+		    (unsigned long)dev);
 
 	return 0;
 }

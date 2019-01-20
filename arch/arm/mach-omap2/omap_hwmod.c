@@ -225,10 +225,10 @@ struct omap_hwmod_soc_ops {
 	int (*disable_direct_prcm)(struct omap_hwmod *oh);
 	u32 (*xlate_clkctrl)(struct omap_hwmod *oh,
 			     struct clkctrl_provider *provider);
-};
+} __no_const;
 
 /* soc_ops: adapts the omap_hwmod code to the currently-booted SoC */
-static struct omap_hwmod_soc_ops soc_ops;
+static struct omap_hwmod_soc_ops soc_ops __read_only;
 
 /* omap_hwmod_list contains all registered struct omap_hwmods */
 static LIST_HEAD(omap_hwmod_list);
