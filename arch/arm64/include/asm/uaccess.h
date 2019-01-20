@@ -104,6 +104,7 @@ static inline unsigned long __range_ok(unsigned long addr, unsigned long size)
  */
 #define untagged_addr(addr)		sign_extend64(addr, 55)
 
+#define access_ok_noprefault(type, addr, size) access_ok((type), (addr), (size))
 #define access_ok(type, addr, size)	__range_ok((unsigned long)(addr), size)
 #define user_addr_max			get_fs
 
