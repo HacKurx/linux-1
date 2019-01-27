@@ -845,7 +845,7 @@ again:
 	return;
 
 discard_page:
-	fscache_stat(&fscache_n_store_pages_over_limit);
+	fscache_stat_unchecked(&fscache_n_store_pages_over_limit);
 	fscache_end_page_write(object, page);
 	goto again;
 
