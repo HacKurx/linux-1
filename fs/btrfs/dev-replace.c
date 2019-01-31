@@ -592,7 +592,7 @@ static int btrfs_dev_replace_finishing(struct btrfs_fs_info *fs_info,
 	 * Increment dev_stats_ccnt so that btrfs_run_dev_stats() will
 	 * update on-disk dev stats value during commit transaction
 	 */
-	atomic_inc(&tgt_device->dev_stats_ccnt);
+	atomic_inc_unchecked(&tgt_device->dev_stats_ccnt);
 
 	/*
 	 * this is again a consistent state where no dev_replace procedure
