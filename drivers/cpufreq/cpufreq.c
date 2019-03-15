@@ -534,7 +534,7 @@ static ssize_t show_boost(struct kobject *kobj,
 }
 
 static ssize_t store_boost(struct kobject *kobj, struct kobj_attribute *attr,
-				  const char *buf, size_t count)
+			   const char *buf, size_t count)
 {
 	int ret, enable;
 
