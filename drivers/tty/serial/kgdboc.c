@@ -152,8 +152,10 @@ static int configure_kgdboc(void)
 	struct console *cons;
 	int is_console = 0;
 
-	if (!strlen(config) || isspace(config[0]))
+	if (!strlen(config) || isspace(config[0])) {
+		err = 0;
 		goto noconfig;
+	}
 
 	kgdb_tty_driver = NULL;
 
