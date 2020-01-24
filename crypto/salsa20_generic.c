@@ -186,7 +186,7 @@ static int encrypt(struct blkcipher_desc *desc,
 	blkcipher_walk_init(&walk, dst, src, nbytes);
 	err = blkcipher_walk_virt_block(desc, &walk, 64);
 
-	__salsa20_ivsetup(ctx, walk.iv);
+	__salsa20_ivsetup(ctx, desc->info);
 
 	while (walk.nbytes >= 64) {
 		__salsa20_encrypt_bytes(ctx, walk.dst.virt.addr,

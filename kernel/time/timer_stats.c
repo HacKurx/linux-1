@@ -421,11 +421,7 @@ static int __init init_tstats_procfs(void)
 {
 	struct proc_dir_entry *pe;
 
-#ifdef CONFIG_GRKERNSEC_PROC_ADD
 	pe = proc_create("timer_stats", 0600, NULL, &tstats_fops);
-#else
-	pe = proc_create("timer_stats", 0644, NULL, &tstats_fops);
-#endif
 	if (!pe)
 		return -ENOMEM;
 	return 0;
